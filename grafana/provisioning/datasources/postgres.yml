@@ -1,0 +1,17 @@
+apiVersion: 1
+datasources:
+  - name: SolarBI PostgreSQL
+    uid: solarbi-pg
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432            # nombre del servicio dentro de la red de Docker
+    user: ${PGUSER}
+    isDefault: true
+    editable: false
+    jsonData:
+      database: ${PGDATABASE}
+      sslmode: disable            # tráfico interno de Docker
+      postgresVersion: 1700
+      timescaledb: false
+    secureJsonData:
+      password: ${PGPASSWORD}

@@ -1,0 +1,11 @@
+apiVersion: 1
+providers:
+  - name: SolarBI
+    orgId: 1
+    folder: SolarBI
+    type: file
+    disableDeletion: true
+    allowUiUpdates: true          # se puede ajustar en la interfaz y exportar el JSON
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

@@ -1,0 +1,490 @@
+{
+  "uid": "solarbi-operativo",
+  "title": "SolarBI: monitoreo operativo",
+  "tags": [
+    "solarbi"
+  ],
+  "description": "Potencia en el tiempo, energía y calidad de datos del inversor. Datos simulados del 1 al 3 de octubre de 2026.",
+  "timezone": "America/Bogota",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "",
+  "schemaVersion": 41,
+  "version": 1,
+  "time": {
+    "from": "2026-10-01T05:00:00.000Z",
+    "to": "2026-10-04T05:00:00.000Z"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "dispositivo",
+        "label": "Dispositivo",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "solarbi-pg"
+        },
+        "refresh": 1,
+        "sort": 0,
+        "query": "SELECT dispositivo_id AS __value, nombre AS __text FROM dwh.dim_dispositivo ORDER BY 1",
+        "definition": "SELECT dispositivo_id AS __value, nombre AS __text FROM dwh.dim_dispositivo ORDER BY 1",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "Inversor 01",
+          "value": "1",
+          "selected": true
+        },
+        "options": []
+      },
+      {
+        "name": "dia",
+        "label": "Día",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "solarbi-pg"
+        },
+        "refresh": 1,
+        "sort": 0,
+        "query": "SELECT fecha_key AS __value, fecha::text AS __text FROM dwh.dim_fecha ORDER BY fecha",
+        "definition": "SELECT fecha_key AS __value, fecha::text AS __text FROM dwh.dim_fecha ORDER BY fecha",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "text": "2026-10-02",
+          "value": "20261002",
+          "selected": true
+        },
+        "options": []
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Energía total del rango (kWh)",
+      "description": "Suma de fact_energia_dia en el rango de tiempo del tablero.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(sum(e.energia_kwh), 0) AS \"Energía total\"\nFROM dwh.fact_energia_dia e\nJOIN dwh.dim_fecha f ON f.fecha_key = e.fecha_key\nJOIN dwh.dim_dispositivo d ON d.dispositivo_key = e.dispositivo_key\nWHERE $__timeFilter(f.fecha::timestamp AT TIME ZONE 'America/Bogota')\n  AND d.dispositivo_id = ${dispositivo}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Energía del día seleccionado (kWh)",
+      "description": "Energía del día elegido en la variable «Día» (potencia × 5/60 h de las lecturas válidas).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.energia_kwh AS \"Energía del día\"\nFROM dwh.fact_energia_dia e\nJOIN dwh.dim_fecha f ON f.fecha_key = e.fecha_key\nJOIN dwh.dim_dispositivo d ON d.dispositivo_key = e.dispositivo_key\nWHERE e.fecha_key = ${dia} AND d.dispositivo_id = ${dispositivo}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "% de datos válidos del día",
+      "description": "Lecturas válidas sobre 288 esperadas por día.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.pct_datos_validos AS \"% de datos válidos\"\nFROM dwh.fact_energia_dia e\nJOIN dwh.dim_fecha f ON f.fecha_key = e.fecha_key\nJOIN dwh.dim_dispositivo d ON d.dispositivo_key = e.dispositivo_key\nWHERE e.fecha_key = ${dia} AND d.dispositivo_id = ${dispositivo}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Potencia AC e irradiancia (cada 5 min)",
+      "description": "Lecturas válidas de Silver. Potencia 0 con irradiancia alta indica falla del inversor.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisLabel": ""
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Irradiancia (W/m²)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: W/m²"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", p_ac_kw AS \"Potencia AC (kW)\"\nFROM silver.lectura_5min\nWHERE $__timeFilter(ts) AND dispositivo_id = ${dispositivo}\nORDER BY 1"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", irradiancia_wm2 AS \"Irradiancia (W/m²)\"\nFROM silver.lectura_5min\nWHERE $__timeFilter(ts) AND dispositivo_id = ${dispositivo}\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Potencia promedio por hora (kW)",
+      "description": "Agrupación horaria con $__timeGroup (pregunta D4).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineWidth": 1,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroupAlias(ts, '1h'),\n  AVG(p_ac_kw) AS \"Potencia promedio (kW)\"\nFROM silver.lectura_5min\nWHERE $__timeFilter(ts) AND dispositivo_id = ${dispositivo}\nGROUP BY 1\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "barchart",
+      "title": "Energía diaria (kWh)",
+      "description": "fact_energia_dia: una barra por día, con el eje desde 0.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "solarbi-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "yellow"
+          },
+          "custom": {
+            "axisSoftMin": 0,
+            "axisSoftMax": 32,
+            "fillOpacity": 80,
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "always",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.9,
+        "stacking": "none",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "solarbi-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT f.fecha::text AS \"Fecha\", e.energia_kwh AS \"Energía (kWh)\"\nFROM dwh.fact_energia_dia e\nJOIN dwh.dim_fecha f ON f.fecha_key = e.fecha_key\nJOIN dwh.dim_dispositivo d ON d.dispositivo_key = e.dispositivo_key\nWHERE $__timeFilter(f.fecha::timestamp AT TIME ZONE 'America/Bogota')\n  AND d.dispositivo_id = ${dispositivo}\nORDER BY f.fecha"
+        }
+      ]
+    }
+  ]
+}

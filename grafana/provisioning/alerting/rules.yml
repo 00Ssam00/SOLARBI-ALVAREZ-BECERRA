@@ -1,0 +1,56 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: planta-solar
+    folder: SolarBI
+    interval: 1m
+    rules:
+      - uid: potencia-cero-dia
+        title: Potencia cero a pleno día (9:00 a 15:00)
+        condition: C
+        for: 2m
+        noDataState: Alerting     # en monitoreo operativo, un inversor que deja de reportar también es falla
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 2592000, to: 0 }   # 30 días: los datos simulados son históricos; en vivo bastarían 15 minutos
+            datasourceUid: solarbi-pg
+            model:
+              refId: A
+              datasource: { type: grafana-postgresql-datasource, uid: solarbi-pg }
+              editorMode: code
+              format: table
+              rawQuery: true
+              rawSql: |
+                SELECT count(*)::float AS lecturas_en_falla
+                FROM silver.lectura_5min
+                WHERE $__timeFilter(ts)
+                  AND p_ac_kw = 0
+                  AND irradiancia_wm2 > 100
+                  AND (ts AT TIME ZONE 'America/Bogota')::time >= time '09:00'
+                  AND (ts AT TIME ZONE 'America/Bogota')::time <  time '15:00'
+          - refId: B
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource: { type: __expr__, uid: __expr__ }
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [2] }     # tres lecturas o más (15 minutos a 5 min por lectura)
+              datasource: { type: __expr__, uid: __expr__ }
+        annotations:
+          summary: El inversor entrega potencia 0 con sol entre 9:00 y 15:00
+          description: Hay tres o más lecturas con p_ac_kw = 0 e irradiancia mayor a 100 W/m2 en horario solar. Revisar el inversor.
+        labels:
+          severidad: alta
+          sitio: Pascual Bravo
