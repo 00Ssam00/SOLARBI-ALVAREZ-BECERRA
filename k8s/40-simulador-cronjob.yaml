@@ -1,0 +1,31 @@
+# Simulador de streaming dentro del clúster: una ejecución por minuto.
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: simulador, namespace: solarbi}
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 50
+      template:
+        metadata: {labels: {app: simulador}}
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: simulador
+            image: solarbi-simulador:1
+            imagePullPolicy: Never
+            env:
+            - {name: PGHOST, value: postgres}
+            - {name: PGDATABASE, value: solarbi}
+            - {name: PGUSER, value: simulador_rw}
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: SIM_CLAVE}}
+            - {name: SIM_ESCENARIO, value: normal}
+            resources:
+              requests: {cpu: 50m, memory: 64Mi}
+              limits: {cpu: 250m, memory: 128Mi}

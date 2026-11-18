@@ -1,0 +1,43 @@
+# Job de ETL: lee el SQLite (Bronze) en solo lectura y carga Silver y Gold.
+apiVersion: batch/v1
+kind: Job
+metadata: {name: etl, namespace: solarbi}
+spec:
+  backoffLimit: 4
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata: {labels: {app: etl}}
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: espera-postgres
+        image: postgres:17-alpine
+        command: ["sh", "-c", "until pg_isready -h postgres -U \"$PGUSER\" -d solarbi; do echo esperando postgres; sleep 2; done"]
+        env:
+        - name: PGUSER
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: PG_USUARIO}}
+      containers:
+      - name: etl
+        image: solarbi-etl:1
+        imagePullPolicy: Never
+        envFrom: [{configMapRef: {name: solarbi-config}}]
+        env:
+        - {name: PGHOST, value: postgres}
+        - {name: PGDATABASE, value: solarbi}
+        - name: PGUSER
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: PG_USUARIO}}
+        - name: PGPASSWORD
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: PG_CLAVE}}
+        - name: LECTOR_CLAVE
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: LECTOR_CLAVE}}
+        - name: SIM_CLAVE
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: SIM_CLAVE}}
+        resources:
+          requests: {cpu: 250m, memory: 256Mi}
+          limits: {cpu: "2", memory: 1Gi}
+        volumeMounts: [{name: bronze, mountPath: /datos, readOnly: true}]
+      volumes:
+      - name: bronze
+        hostPath:
+          path: __RUTA_BRONZE__        # lo reemplaza scripts/up.sh con la ruta absoluta de origen/data
+          type: Directory

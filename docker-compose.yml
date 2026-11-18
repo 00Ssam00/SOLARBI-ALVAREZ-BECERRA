@@ -1,0 +1,49 @@
+# Desarrollo local (paso previo al clúster): PostgreSQL + ETL + Grafana, con las mismas imágenes y
+# el mismo provisioning que usa Kubernetes. Uso:  cp .env.ejemplo .env  &&  docker compose up
+name: solarbi-dev
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: solarbi
+      POSTGRES_USER: ${PG_USUARIO}
+      POSTGRES_PASSWORD: ${PG_CLAVE}
+    ports: ["5434:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d solarbi"]
+      interval: 5s
+      retries: 10
+  etl:
+    build: {context: ., dockerfile: etl/Dockerfile}
+    image: solarbi-etl:1
+    depends_on: {postgres: {condition: service_healthy}}
+    environment:
+      PGHOST: postgres
+      PGDATABASE: solarbi
+      PGUSER: ${PG_USUARIO}
+      PGPASSWORD: ${PG_CLAVE}
+      LECTOR_CLAVE: ${LECTOR_CLAVE}
+      SIM_CLAVE: ${SIM_CLAVE}
+      SQLITE_PATH: /datos/opencem-v1.0.0.sqlite
+    volumes: ["./origen/data:/datos:ro"]
+  simulador:
+    build: {context: ., dockerfile: simulador/Dockerfile}
+    image: solarbi-simulador:1
+    depends_on: {etl: {condition: service_completed_successfully}}
+    environment: {PGHOST: postgres, PGDATABASE: solarbi, PGUSER: simulador_rw, PGPASSWORD: "${SIM_CLAVE}"}
+    entrypoint: ["sh", "-c", "while true; do python -u simulador.py; sleep 60; done"]
+  grafana:
+    image: grafana/grafana:11.6.0
+    depends_on: {etl: {condition: service_completed_successfully}}
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_CLAVE}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      LECTOR_CLAVE: ${LECTOR_CLAVE}
+    ports: ["3002:3000"]
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+volumes: {pgdata: {}}

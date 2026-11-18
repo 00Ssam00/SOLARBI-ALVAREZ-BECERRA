@@ -1,0 +1,22 @@
+# kubectl apply -k . genera los ConfigMaps de Grafana desde los archivos del repositorio.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: solarbi
+resources:
+  - k8s/00-namespace.yaml
+  - k8s/10-postgres.yaml
+  - k8s/20-etl-job.yaml
+  - k8s/30-config.yaml
+  - k8s/40-simulador-cronjob.yaml
+  - k8s/50-grafana.yaml
+configMapGenerator:
+  - name: grafana-datasources
+    files: [grafana/provisioning/datasources/datasource.yaml]
+  - name: grafana-dashboards-provider
+    files: [grafana/provisioning/dashboards/dashboards.yaml]
+  - name: grafana-alertas
+    files: [grafana/provisioning/alerting/alertas.yaml]
+  - name: grafana-dashboards
+    files: [grafana/dashboards/solarbi.json]
+generatorOptions:
+  disableNameSuffixHash: true
