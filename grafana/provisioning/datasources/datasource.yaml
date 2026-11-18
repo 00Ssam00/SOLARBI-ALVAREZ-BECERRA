@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: SolarBI PostgreSQL
+    uid: solarbi-pg
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432                                 # DNS del servicio (Kubernetes: postgres; compose: postgres)
+    user: lector_bi                                  # rol de solo lectura
+    isDefault: true
+    jsonData:
+      database: solarbi
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false
+    secureJsonData:
+      password: $LECTOR_CLAVE                        # viene del Secret, no del repositorio
