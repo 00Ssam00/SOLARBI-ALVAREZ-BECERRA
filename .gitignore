@@ -1,0 +1,6 @@
+origen/
+.env
+.venv/
+*.sqlite
+*.zst
+__pycache__/
