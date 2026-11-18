@@ -7,7 +7,7 @@ Despues: 166753 lecturas 5min, 603 dias, 39980 eventos, 24976 anotaciones
 
 === PRUEBA 2: se elimina el pod de Grafana ===
 $ kubectl delete pod -l app=grafana
-pod "grafana-5d9b565856-857mn" deleted
+pod "grafana-5d9b565856-cvjhr" deleted
 Waiting for deployment "grafana" rollout to finish: 0 of 1 updated replicas are available...
 deployment "grafana" successfully rolled out
 Dashboards provisionados tras el reinicio:

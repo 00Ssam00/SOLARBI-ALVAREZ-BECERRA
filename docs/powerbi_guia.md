@@ -4,7 +4,14 @@ Formato versionable: **PBIP** (Power BI Project). En Power BI Desktop: *Archivo 
 
 ## 1. Conexión (no a los archivos de origen)
 
-Para que Power BI en Windows llegue al clúster del Mac hay que exponer el puerto: el Service `postgres-externo` escucha en `<IP del Mac>:5433`. Desde el Mac: `ipconfig getifaddr en0`. En Power BI: *Obtener datos > Base de datos PostgreSQL*, servidor `IP_DEL_MAC:5433`, base `solarbi`, modo **Importar**, usuario `lector_bi` y la clave `LECTOR_CLAVE` de `.env` (rol de solo lectura). Si ambos equipos no están en la misma red, la alternativa es exportar las tablas `gold.*` a CSV con DBeaver, pero la conexión directa es lo que pide el enunciado.
+El Service `postgres-externo` (LoadBalancer :5433) solo escucha en `127.0.0.1` del Mac (comprobado con `lsof`), así que **otro PC no lo alcanza**. Para que Power BI en Windows llegue al clúster, en el Mac abre un reenvío de puerto en otra terminal y déjalo corriendo mientras trabajas:
+
+```bash
+kubectl --context orbstack -n solarbi port-forward --address 0.0.0.0 svc/postgres 5435:5432
+ipconfig getifaddr en0        # IP del Mac en la red (los dos equipos deben estar en la misma red)
+```
+
+En Power BI: *Obtener datos > Base de datos PostgreSQL*, servidor `IP_DEL_MAC:5435`, base `solarbi`, modo **Importar**, usuario `lector_bi` y la clave `LECTOR_CLAVE` de `.env` (rol de solo lectura). Cuando termines, cierra el reenvío (Ctrl+C): mientras está abierto, la base es accesible desde la red local con ese rol. Si el Mac tiene el firewall activo, permite las conexiones entrantes para `kubectl`. Si Power BI pide cifrado y falla, en las opciones de la conexión desactiva "Cifrar conexiones". Alternativa si no hay red compartida: exportar las tablas `gold.*` a CSV con DBeaver (menos fiel a lo que pide el enunciado).
 
 Tablas a importar: `gold.dim_fecha`, `gold.dim_hora`, `gold.dim_inversor`, `gold.dim_estado_operativo`, `gold.dim_alarma`, `gold.dim_tipo_contexto`, `gold.fact_lectura_5min`, `gold.fact_energia_dia`, `gold.fact_evento_alarma`, `gold.fact_contexto`, `gold.parametro`.
 

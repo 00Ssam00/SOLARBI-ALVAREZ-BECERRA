@@ -36,44 +36,27 @@ Pod Template:
   Volumes:            <none>
   Node-Selectors:     <none>
   Tolerations:        <none>
-Last Schedule Time:   Wed, 18 Nov 2026 06:32:00 -0500
+Last Schedule Time:   Wed, 18 Nov 2026 06:37:00 -0500
 Active Jobs:          <none>
 Events:
-  Type    Reason            Age                    From                Message
-  ----    ------            ----                   ----                -------
-  Normal  SuccessfulCreate  10m                    cronjob-controller  Created job simulador-29916682
-  Normal  SawCompletedJob   10m                    cronjob-controller  Saw completed job: simulador-29916682, condition: Failed
-  Normal  SuccessfulCreate  9m35s                  cronjob-controller  Created job simulador-29916683
-  Normal  SawCompletedJob   9m30s                  cronjob-controller  Saw completed job: simulador-29916683, condition: Complete
-  Normal  SuccessfulCreate  8m35s                  cronjob-controller  Created job simulador-29916684
-  Normal  SuccessfulDelete  8m29s                  cronjob-controller  Deleted job simulador-29916683
-  Normal  SawCompletedJob   8m29s                  cronjob-controller  Saw completed job: simulador-29916684, condition: Complete
-  Normal  SuccessfulCreate  7m35s                  cronjob-controller  Created job simulador-29916685
-  Normal  SuccessfulDelete  7m29s                  cronjob-controller  Deleted job simulador-29916684
-  Normal  SawCompletedJob   7m29s (x2 over 7m29s)  cronjob-controller  Saw completed job: simulador-29916685, condition: Complete
-  Normal  SuccessfulCreate  6m35s                  cronjob-controller  Created job simulador-29916686
-  Normal  SuccessfulDelete  6m30s                  cronjob-controller  Deleted job simulador-29916685
-  Normal  SawCompletedJob   6m30s                  cronjob-controller  Saw completed job: simulador-29916686, condition: Complete
-  Normal  SuccessfulCreate  5m35s                  cronjob-controller  Created job simulador-29916687
-  Normal  SuccessfulDelete  5m31s                  cronjob-controller  Deleted job simulador-29916686
-  Normal  SawCompletedJob   5m31s (x2 over 5m31s)  cronjob-controller  Saw completed job: simulador-29916687, condition: Complete
-  Normal  SuccessfulCreate  4m35s                  cronjob-controller  Created job simulador-29916688
-  Normal  SuccessfulDelete  4m30s                  cronjob-controller  Deleted job simulador-29916687
-  Normal  SawCompletedJob   4m30s (x2 over 4m30s)  cronjob-controller  Saw completed job: simulador-29916688, condition: Complete
-  Normal  SuccessfulCreate  3m35s                  cronjob-controller  Created job simulador-29916689
-  Normal  SuccessfulDelete  3m31s                  cronjob-controller  Deleted job simulador-29916688
-  Normal  SawCompletedJob   3m31s                  cronjob-controller  Saw completed job: simulador-29916689, condition: Complete
-  Normal  SuccessfulCreate  2m35s                  cronjob-controller  Created job simulador-29916690
-  Normal  SuccessfulCreate  35s (x2 over 95s)      cronjob-controller  (combined from similar events): Created job simulador-29916692
+  Type    Reason            Age                From                Message
+  ----    ------            ----               ----                -------
+  Normal  SuccessfulCreate  2m44s              cronjob-controller  Created job simulador-29916695
+  Normal  SawCompletedJob   2m38s              cronjob-controller  Saw completed job: simulador-29916695, condition: Failed
+  Normal  SuccessfulCreate  104s               cronjob-controller  Created job simulador-29916696
+  Normal  SawCompletedJob   99s                cronjob-controller  Saw completed job: simulador-29916696, condition: Complete
+  Normal  SuccessfulCreate  44s                cronjob-controller  Created job simulador-29916697
+  Normal  SuccessfulDelete  38s                cronjob-controller  Deleted job simulador-29916696
+  Normal  SawCompletedJob   38s (x2 over 38s)  cronjob-controller  Saw completed job: simulador-29916697, condition: Complete
 
 $ kubectl describe job/etl
 Name:                        etl
 Namespace:                   solarbi
-Selector:                    batch.kubernetes.io/controller-uid=138c6839-1fa7-41d6-a03c-1a7dfdc93986
+Selector:                    batch.kubernetes.io/controller-uid=6fca287d-487a-42e6-8637-e53150f13ed2
 Labels:                      app=etl
-                             batch.kubernetes.io/controller-uid=138c6839-1fa7-41d6-a03c-1a7dfdc93986
+                             batch.kubernetes.io/controller-uid=6fca287d-487a-42e6-8637-e53150f13ed2
                              batch.kubernetes.io/job-name=etl
-                             controller-uid=138c6839-1fa7-41d6-a03c-1a7dfdc93986
+                             controller-uid=6fca287d-487a-42e6-8637-e53150f13ed2
                              job-name=etl
 Annotations:                 <none>
 Parallelism:                 1
@@ -82,15 +65,15 @@ Completion Mode:             NonIndexed
 Suspend:                     false
 Backoff Limit:               4
 TTL Seconds After Finished:  86400
-Start Time:                  Wed, 18 Nov 2026 06:21:47 -0500
-Completed At:                Wed, 18 Nov 2026 06:22:26 -0500
-Duration:                    39s
+Start Time:                  Wed, 18 Nov 2026 06:34:44 -0500
+Completed At:                Wed, 18 Nov 2026 06:35:22 -0500
+Duration:                    38s
 Pods Statuses:               0 Active (0 Ready) / 1 Succeeded / 0 Failed
 Pod Template:
   Labels:  app=etl
-           batch.kubernetes.io/controller-uid=138c6839-1fa7-41d6-a03c-1a7dfdc93986
+           batch.kubernetes.io/controller-uid=6fca287d-487a-42e6-8637-e53150f13ed2
            batch.kubernetes.io/job-name=etl
-           controller-uid=138c6839-1fa7-41d6-a03c-1a7dfdc93986
+           controller-uid=6fca287d-487a-42e6-8637-e53150f13ed2
            job-name=etl
   Init Containers:
    espera-postgres:
@@ -134,20 +117,20 @@ Pod Template:
   Node-Selectors:  <none>
   Tolerations:     <none>
 Events:
-  Type    Reason            Age   From            Message
-  ----    ------            ----  ----            -------
-  Normal  SuccessfulCreate  10m   job-controller  Created pod: etl-4mkw9
-  Normal  Completed         10m   job-controller  Job completed
+  Type    Reason            Age    From            Message
+  ----    ------            ----   ----            -------
+  Normal  SuccessfulCreate  3m     job-controller  Created pod: etl-x82d8
+  Normal  Completed         2m22s  job-controller  Job completed
 
 $ kubectl logs job/etl
-[etl 11:22:01] Ventana UTC 2025-07-12 a 2026-07-14; Bronze: /datos/opencem-v1.0.0.sqlite
-[etl 11:22:01] DDL 01_esquemas.sql
-[etl 11:22:01] DDL 02_silver.sql
-[etl 11:22:01] DDL 03_gold.sql
-[etl 11:22:01] DDL 05_vistas.sql
-[etl 11:22:05] Reglas: 18 conteos
-[etl 11:22:10] Silver analog: 166753 bloques
-[etl 11:22:11] Silver status: 146643 bloques
-[etl 11:22:15] Contexto: 24976 anotaciones, 0 inválidas, 24976 recortadas
-[etl 11:22:15] Silver staging: 166753 bloques, 39980 episodios, 542 días de equipo
-[etl 11:22:22] OK corrida 1
+[etl 11:34:57] Ventana UTC 2025-07-12 a 2026-07-14; Bronze: /datos/opencem-v1.0.0.sqlite
+[etl 11:34:57] DDL 01_esquemas.sql
+[etl 11:34:57] DDL 02_silver.sql
+[etl 11:34:57] DDL 03_gold.sql
+[etl 11:34:57] DDL 05_vistas.sql
+[etl 11:35:01] Reglas: 18 conteos
+[etl 11:35:06] Silver analog: 166753 bloques
+[etl 11:35:08] Silver status: 146643 bloques
+[etl 11:35:12] Contexto: 24976 anotaciones, 0 inválidas, 24976 recortadas
+[etl 11:35:12] Silver staging: 166753 bloques, 39980 episodios, 542 días de equipo
+[etl 11:35:19] OK corrida 1

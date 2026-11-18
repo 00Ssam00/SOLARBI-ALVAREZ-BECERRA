@@ -1,43 +1,43 @@
 $ kubectl get all,pvc,configmap,secret -n solarbi
 NAME                           READY   STATUS      RESTARTS   AGE
-pod/etl-4mkw9                  0/1     Completed   0          10m
-pod/grafana-5d9b565856-857mn   1/1     Running     0          10m
-pod/postgres-0                 1/1     Running     0          10m
-pod/simulador-29916682-nf5vm   0/1     Error       0          10m
-pod/simulador-29916692-dfgrs   0/1     Completed   0          35s
+pod/etl-x82d8                  0/1     Completed   0          3m
+pod/grafana-5d9b565856-cvjhr   1/1     Running     0          3m1s
+pod/postgres-0                 1/1     Running     0          3m1s
+pod/simulador-29916695-b9bwz   0/1     Error       0          2m44s
+pod/simulador-29916697-qspxq   0/1     Completed   0          44s
 
 NAME                       TYPE           CLUSTER-IP        EXTERNAL-IP     PORT(S)          AGE
-service/grafana            LoadBalancer   192.168.194.236   192.168.139.2   3001:30149/TCP   10m
-service/postgres           ClusterIP      None              <none>          5432/TCP         10m
-service/postgres-externo   LoadBalancer   192.168.194.183   192.168.139.2   5433:30151/TCP   10m
+service/grafana            LoadBalancer   192.168.194.216   192.168.139.2   3001:32123/TCP   3m1s
+service/postgres           ClusterIP      None              <none>          5432/TCP         3m1s
+service/postgres-externo   LoadBalancer   192.168.194.236   192.168.139.2   5433:32410/TCP   3m1s
 
 NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/grafana   1/1     1            1           10m
+deployment.apps/grafana   1/1     1            1           3m1s
 
 NAME                                 DESIRED   CURRENT   READY   AGE
-replicaset.apps/grafana-5d9b565856   1         1         1       10m
+replicaset.apps/grafana-5d9b565856   1         1         1       3m1s
 
 NAME                        READY   AGE
-statefulset.apps/postgres   1/1     10m
+statefulset.apps/postgres   1/1     3m1s
 
 NAME                      SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
-cronjob.batch/simulador   * * * * *   <none>     False     0        35s             10m
+cronjob.batch/simulador   * * * * *   <none>     False     0        44s             3m1s
 
 NAME                           STATUS     COMPLETIONS   DURATION   AGE
-job.batch/etl                  Complete   1/1           39s        10m
-job.batch/simulador-29916682   Failed     0/1           10m        10m
-job.batch/simulador-29916692   Complete   1/1           6s         35s
+job.batch/etl                  Complete   1/1           38s        3m1s
+job.batch/simulador-29916695   Failed     0/1           2m44s      2m44s
+job.batch/simulador-29916697   Complete   1/1           6s         44s
 
 NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-persistentvolumeclaim/datos-postgres-0   Bound    pvc-d8e1752b-a6cf-4592-83bb-31636260c2ec   5Gi        RWO            local-path     <unset>                 10m
+persistentvolumeclaim/datos-postgres-0   Bound    pvc-189fe99c-e5d6-4709-b5ac-337e2003cf17   5Gi        RWO            local-path     <unset>                 3m1s
 
 NAME                                    DATA   AGE
-configmap/grafana-alertas               1      10m
-configmap/grafana-dashboards            2      10m
-configmap/grafana-dashboards-provider   1      10m
-configmap/grafana-datasources           1      10m
-configmap/kube-root-ca.crt              1      10m
-configmap/solarbi-config                4      10m
+configmap/grafana-alertas               1      3m1s
+configmap/grafana-dashboards            2      3m1s
+configmap/grafana-dashboards-provider   1      3m1s
+configmap/grafana-datasources           1      3m1s
+configmap/kube-root-ca.crt              1      3m1s
+configmap/solarbi-config                4      3m1s
 
 NAME                          TYPE     DATA   AGE
-secret/solarbi-credenciales   Opaque   5      10m
+secret/solarbi-credenciales   Opaque   5      3m1s
