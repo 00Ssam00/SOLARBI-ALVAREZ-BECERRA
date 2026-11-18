@@ -1,0 +1,41 @@
+$ kubectl get all,pvc,configmap,secret -n solarbi
+NAME                           READY   STATUS      RESTARTS   AGE
+pod/etl-2vnf6                  0/1     Completed   0          2m2s
+pod/grafana-5d9b565856-jkv5x   1/1     Running     0          2m2s
+pod/postgres-0                 1/1     Running     0          2m2s
+pod/simulador-29916658-gvz8f   0/1     Completed   0          15s
+
+NAME                       TYPE           CLUSTER-IP        EXTERNAL-IP     PORT(S)          AGE
+service/grafana            LoadBalancer   192.168.194.245   192.168.139.2   3001:31050/TCP   2m2s
+service/postgres           ClusterIP      None              <none>          5432/TCP         2m2s
+service/postgres-externo   LoadBalancer   192.168.194.242   192.168.139.2   5433:31728/TCP   2m2s
+
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/grafana   1/1     1            1           2m2s
+
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/grafana-5d9b565856   1         1         1       2m2s
+
+NAME                        READY   AGE
+statefulset.apps/postgres   1/1     2m2s
+
+NAME                      SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+cronjob.batch/simulador   * * * * *   <none>     False     0        15s             2m2s
+
+NAME                           STATUS     COMPLETIONS   DURATION   AGE
+job.batch/etl                  Complete   1/1           46s        2m2s
+job.batch/simulador-29916658   Complete   1/1           4s         15s
+
+NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/datos-postgres-0   Bound    pvc-62d8b361-116a-4b61-bfc4-ec05496b5d2a   5Gi        RWO            local-path     <unset>                 2m2s
+
+NAME                                    DATA   AGE
+configmap/grafana-alertas               1      2m2s
+configmap/grafana-dashboards            1      2m2s
+configmap/grafana-dashboards-provider   1      2m2s
+configmap/grafana-datasources           1      2m2s
+configmap/kube-root-ca.crt              1      2m2s
+configmap/solarbi-config                3      2m2s
+
+NAME                          TYPE     DATA   AGE
+secret/solarbi-credenciales   Opaque   5      2m2s

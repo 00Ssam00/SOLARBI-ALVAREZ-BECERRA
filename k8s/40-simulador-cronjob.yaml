@@ -25,7 +25,8 @@ spec:
             - {name: PGUSER, value: simulador_rw}
             - name: PGPASSWORD
               valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: SIM_CLAVE}}
-            - {name: SIM_ESCENARIO, value: normal}
+            - name: SIM_ESCENARIO
+              valueFrom: {configMapKeyRef: {name: solarbi-config, key: SIM_ESCENARIO}}
             resources:
               requests: {cpu: 50m, memory: 64Mi}
               limits: {cpu: 250m, memory: 128Mi}

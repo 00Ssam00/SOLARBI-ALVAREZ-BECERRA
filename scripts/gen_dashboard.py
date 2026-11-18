@@ -42,7 +42,7 @@ paneles = [
     panel(1, "stat", "Carga de la batería (SOC)", 0, 1, 6, 5, ULT.replace("{col}", "soc"), unit="percent", extra=SEM_SOC,
           desc="Último valor por inversor. La alerta 'Batería baja' se dispara por debajo de 30 %."),
     panel(2, "stat", "Potencia FV ahora", 6, 1, 6, 5, ULT.replace("{col}", "pv_w"), unit="watt"),
-    panel(3, "stat", "Alarmas activas (últimos 2 min)", 12, 1, 6, 5,
+    panel(3, "stat", "Lecturas con alarma (últimos 2 min)", 12, 1, 6, 5,
           "SELECT now() AS time, 'Alarmas' AS metric, COUNT(*) FILTER (WHERE alarma) AS value FROM rt.lectura "
           "WHERE ts > now() - interval '2 minutes' AND " + INV,
           extra={"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}}),
@@ -63,7 +63,7 @@ paneles = [
     panel(8, "barchart", "Perfil horario de potencia FV (promedio)", 12, 15, 12, 8,
           "SELECT hora_id::text AS \"Hora local\", AVG(pv_w_prom) AS \"FV promedio (W)\" FROM gold.fact_lectura_5min "
           "WHERE $__timeFilter(bloque_ts) AND " + INV + " GROUP BY hora_id ORDER BY hora_id", fmt="table", unit="watt"),
-    panel(9, "timeseries", "SOC mínimo por ${agrupacion}", 0, 23, 12, 8,
+    panel(9, "timeseries", "SOC mínimo por periodo (agrupación: ${agrupacion})", 0, 23, 12, 8,
           "SELECT date_trunc('${agrupacion}', bloque_ts) AS time, 'Inversor ' || inversor_id AS metric, MIN(soc_min) AS value "
           "FROM gold.fact_lectura_5min WHERE $__timeFilter(bloque_ts) AND " + INV + " GROUP BY 1, 2 ORDER BY 1",
           unit="percent", extra={"defaults": {"min": 0, "max": 100}}),
@@ -72,28 +72,43 @@ paneles = [
           "FROM gold.fact_evento_alarma WHERE $__timeFilter(inicio_ts) AND " + INV + " GROUP BY 1, 2 ORDER BY 1",
           extra={"defaults": {"custom": {"drawStyle": "bars", "fillOpacity": 60}}}),
     fila(102, "Calidad del dato (última corrida del ETL)", 31),
-    panel(11, "table", "Conteos por regla de calidad", 0, 32, 12, 9,
+    panel(11, "table", "Conteos por regla de calidad", 0, 32, 10, 15,
           "SELECT regla AS \"Regla\", accion AS \"Acción\", SUM(filas_afectadas) AS \"Filas\" FROM etl.regla_calidad "
           "WHERE corrida_id = (SELECT MAX(corrida_id) FROM etl.corrida WHERE estado = 'ok') GROUP BY 1, 2 ORDER BY 1", fmt="table"),
-    panel(12, "table", "Conciliación Bronze → Silver → Gold", 12, 32, 12, 9,
+    panel(12, "table", "Conciliación Bronze → Silver → Gold", 10, 32, 14, 15,
           "SELECT control AS \"Control\", inversor_id AS \"Inversor\", valor_origen AS \"Origen\", valor_destino AS \"Destino\", cuadra AS \"Cuadra\" "
           "FROM etl.conciliacion WHERE corrida_id = (SELECT MAX(corrida_id) FROM etl.corrida WHERE estado = 'ok') ORDER BY 1, 2", fmt="table"),
 ]
 
-dash = {
-    "uid": "solarbi-operacion", "title": "SolarBI: operación de la microrred", "tags": ["solarbi", "taller6"],
-    "timezone": "browser", "schemaVersion": 39, "version": 1, "editable": False, "refresh": "10s",
-    "time": {"from": "2026-06-01T00:00:00.000Z", "to": "2026-06-20T00:00:00.000Z"},
-    "templating": {"list": [
-        {"name": "inversor", "label": "Inversor", "type": "query", "datasource": DS, "multi": True, "includeAll": True,
-         "refresh": 1, "current": {"selected": True, "text": "All", "value": "$__all"},
-         "query": "SELECT inversor_id AS __value, nombre AS __text FROM gold.dim_inversor ORDER BY 1"},
-        {"name": "agrupacion", "label": "Agrupar por", "type": "custom", "query": "hour,day",
-         "current": {"selected": True, "text": "day", "value": "day"},
-         "options": [{"text": "hour", "value": "hour", "selected": False}, {"text": "day", "value": "day", "selected": True}]},
-    ]},
-    "panels": paneles,
-}
-out = pathlib.Path(__file__).resolve().parent.parent / "grafana" / "dashboards" / "solarbi.json"
-out.write_text(json.dumps(dash, ensure_ascii=False, indent=1), encoding="utf-8")
-print("escrito", out)
+VAR_INV = {"name": "inversor", "label": "Inversor", "type": "query", "datasource": DS, "multi": True, "includeAll": True,
+           "refresh": 1, "current": {"selected": True, "text": "All", "value": "$__all"},
+           "query": "SELECT inversor_id AS __value, nombre AS __text FROM gold.dim_inversor ORDER BY 1"}
+VAR_AGR = {"name": "agrupacion", "label": "Agrupar por", "type": "custom", "query": "hour,day",
+           "current": {"selected": True, "text": "day", "value": "day"},
+           "options": [{"text": "hour", "value": "hour", "selected": False}, {"text": "day", "value": "day", "selected": True}]}
+
+
+def dash(uid, titulo, ids, variables, tiempo, refresco, dy):
+    ps = []
+    for p in paneles:
+        if p["id"] in ids:
+            p = json.loads(json.dumps(p))
+            p["gridPos"]["y"] -= dy
+            ps.append(p)
+    return {"uid": uid, "title": titulo, "tags": ["solarbi", "taller6"], "timezone": "browser", "schemaVersion": 39,
+            "version": 1, "editable": False, "refresh": refresco, "time": tiempo,
+            "links": [{"title": "Tiempo real", "type": "link", "url": "/d/solarbi-tiempo-real", "icon": "bolt"},
+                      {"title": "Histórico", "type": "link", "url": "/d/solarbi-historico", "icon": "history"}],
+            "templating": {"list": variables}, "panels": ps}
+
+
+carpeta = pathlib.Path(__file__).resolve().parent.parent / "grafana" / "dashboards"
+for viejo in carpeta.glob("*.json"):
+    viejo.unlink()
+rt = dash("solarbi-tiempo-real", "SolarBI: tiempo real", {100, 1, 2, 3, 4, 5, 6}, [VAR_INV],
+          {"from": "now-30m", "to": "now"}, "10s", 0)
+hist = dash("solarbi-historico", "SolarBI: histórico y calidad del dato", {101, 7, 8, 9, 10, 11, 12, 102}, [VAR_INV, VAR_AGR],
+            {"from": "2025-07-12T00:00:00.000Z", "to": "2026-07-14T00:00:00.000Z"}, "", 14)
+for nombre, d in (("tiempo-real", rt), ("historico", hist)):
+    (carpeta / f"solarbi-{nombre}.json").write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("escrito", f"solarbi-{nombre}.json")

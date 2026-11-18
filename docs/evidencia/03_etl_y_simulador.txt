@@ -1,0 +1,133 @@
+$ kubectl describe cronjob/simulador
+Name:                          simulador
+Namespace:                     solarbi
+Labels:                        <none>
+Annotations:                   <none>
+Schedule:                      * * * * *
+Concurrency Policy:            Forbid
+Suspend:                       False
+Successful Job History Limit:  1
+Failed Job History Limit:      2
+Starting Deadline Seconds:     <unset>
+Selector:                      <unset>
+Parallelism:                   <unset>
+Completions:                   <unset>
+Active Deadline Seconds:       50s
+Pod Template:
+  Labels:  app=simulador
+  Containers:
+   simulador:
+    Image:      solarbi-simulador:1
+    Port:       <none>
+    Host Port:  <none>
+    Limits:
+      cpu:     250m
+      memory:  128Mi
+    Requests:
+      cpu:     50m
+      memory:  64Mi
+    Environment:
+      PGHOST:         postgres
+      PGDATABASE:     solarbi
+      PGUSER:         simulador_rw
+      PGPASSWORD:     <set to the key 'SIM_CLAVE' in secret 'solarbi-credenciales'>  Optional: false
+      SIM_ESCENARIO:  normal
+    Mounts:           <none>
+  Volumes:            <none>
+  Node-Selectors:     <none>
+  Tolerations:        <none>
+Last Schedule Time:   Wed, 18 Nov 2026 05:58:00 -0500
+Active Jobs:          <none>
+Events:
+  Type    Reason            Age   From                Message
+  ----    ------            ----  ----                -------
+  Normal  SuccessfulCreate  75s   cronjob-controller  Created job simulador-29916657
+  Normal  SawCompletedJob   70s   cronjob-controller  Saw completed job: simulador-29916657, condition: Complete
+  Normal  SuccessfulCreate  15s   cronjob-controller  Created job simulador-29916658
+  Normal  SuccessfulDelete  11s   cronjob-controller  Deleted job simulador-29916657
+  Normal  SawCompletedJob   11s   cronjob-controller  Saw completed job: simulador-29916658, condition: Complete
+
+$ kubectl describe job/etl
+Name:                        etl
+Namespace:                   solarbi
+Selector:                    batch.kubernetes.io/controller-uid=6019a0be-3c5e-44ce-9820-a43362615768
+Labels:                      app=etl
+                             batch.kubernetes.io/controller-uid=6019a0be-3c5e-44ce-9820-a43362615768
+                             batch.kubernetes.io/job-name=etl
+                             controller-uid=6019a0be-3c5e-44ce-9820-a43362615768
+                             job-name=etl
+Annotations:                 <none>
+Parallelism:                 1
+Completions:                 1
+Completion Mode:             NonIndexed
+Suspend:                     false
+Backoff Limit:               4
+TTL Seconds After Finished:  86400
+Start Time:                  Wed, 18 Nov 2026 05:56:13 -0500
+Completed At:                Wed, 18 Nov 2026 05:56:59 -0500
+Duration:                    46s
+Pods Statuses:               0 Active (0 Ready) / 1 Succeeded / 0 Failed
+Pod Template:
+  Labels:  app=etl
+           batch.kubernetes.io/controller-uid=6019a0be-3c5e-44ce-9820-a43362615768
+           batch.kubernetes.io/job-name=etl
+           controller-uid=6019a0be-3c5e-44ce-9820-a43362615768
+           job-name=etl
+  Init Containers:
+   espera-postgres:
+    Image:      postgres:17-alpine
+    Port:       <none>
+    Host Port:  <none>
+    Command:
+      sh
+      -c
+      until pg_isready -h postgres -U "$PGUSER" -d solarbi; do echo esperando postgres; sleep 2; done
+    Environment:
+      PGUSER:  <set to the key 'PG_USUARIO' in secret 'solarbi-credenciales'>  Optional: false
+    Mounts:    <none>
+  Containers:
+   etl:
+    Image:      solarbi-etl:1
+    Port:       <none>
+    Host Port:  <none>
+    Limits:
+      cpu:     2
+      memory:  1Gi
+    Requests:
+      cpu:     250m
+      memory:  256Mi
+    Environment Variables from:
+      solarbi-config  ConfigMap  Optional: false
+    Environment:
+      PGHOST:        postgres
+      PGDATABASE:    solarbi
+      PGUSER:        <set to the key 'PG_USUARIO' in secret 'solarbi-credenciales'>    Optional: false
+      PGPASSWORD:    <set to the key 'PG_CLAVE' in secret 'solarbi-credenciales'>      Optional: false
+      LECTOR_CLAVE:  <set to the key 'LECTOR_CLAVE' in secret 'solarbi-credenciales'>  Optional: false
+      SIM_CLAVE:     <set to the key 'SIM_CLAVE' in secret 'solarbi-credenciales'>     Optional: false
+    Mounts:
+      /datos from bronze (ro)
+  Volumes:
+   bronze:
+    Type:          HostPath (bare host directory volume)
+    Path:          /Users/samuel/Documents/Programacion/BI/SOLARBI-TALLER6/origen/data
+    HostPathType:  Directory
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Events:
+  Type    Reason            Age   From            Message
+  ----    ------            ----  ----            -------
+  Normal  SuccessfulCreate  2m2s  job-controller  Created pod: etl-2vnf6
+  Normal  Completed         76s   job-controller  Job completed
+
+$ kubectl logs job/etl
+[etl 10:56:28] Ventana UTC 2025-07-12 a 2026-07-14; Bronze: /datos/opencem-v1.0.0.sqlite
+[etl 10:56:28] DDL 01_esquemas.sql
+[etl 10:56:28] DDL 02_silver.sql
+[etl 10:56:28] DDL 03_gold.sql
+[etl 10:56:32] Reglas: 18 conteos
+[etl 10:56:42] Silver analog: 166753 bloques
+[etl 10:56:44] Silver status: 146643 bloques
+[etl 10:56:47] Contexto: 24976 anotaciones, 0 inválidas, 24976 recortadas
+[etl 10:56:47] Silver staging: 166753 bloques, 39980 episodios, 542 días de equipo
+[etl 10:56:54] OK corrida 1

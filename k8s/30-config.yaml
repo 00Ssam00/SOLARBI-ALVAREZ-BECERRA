@@ -5,3 +5,4 @@ data:
   SQLITE_PATH: /datos/opencem-v1.0.0.sqlite
   ETL_DESDE: "2025-07-12"
   ETL_HASTA: "2026-07-14"
+  SIM_ESCENARIO: normal            # normal | falla | bateria_baja (cámbialo con scripts/escenario.sh)

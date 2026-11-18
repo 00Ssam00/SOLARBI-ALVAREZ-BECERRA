@@ -17,6 +17,8 @@ configMapGenerator:
   - name: grafana-alertas
     files: [grafana/provisioning/alerting/alertas.yaml]
   - name: grafana-dashboards
-    files: [grafana/dashboards/solarbi.json]
+    files:
+      - grafana/dashboards/solarbi-tiempo-real.json
+      - grafana/dashboards/solarbi-historico.json
 generatorOptions:
   disableNameSuffixHash: true

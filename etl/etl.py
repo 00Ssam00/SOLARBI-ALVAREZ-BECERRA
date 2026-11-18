@@ -48,7 +48,7 @@ def conectar_pg():
 
 
 def aplicar_ddl(pg):
-    for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "sql", "0[123]_*.sql"))):
+    for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "sql", "0[1235]_*.sql"))):
         log(f"DDL {os.path.basename(f)}")
         with open(f, encoding="utf-8") as fh:
             pg.execute(fh.read())

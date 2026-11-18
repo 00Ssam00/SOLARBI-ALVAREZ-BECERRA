@@ -54,7 +54,7 @@ def main():
                     alarma = True
                 soc = min(100.0, max(0.0, soc + (pv + red - carga) * PASO_S / 3600.0 / CAPACIDAD_WH * 100.0))
                 if ESCENARIO == "bateria_baja":
-                    soc = min(soc, max(5.0, soc - 0.4))
+                    soc = max(5.0, soc - 3.0)   # descarga acelerada para que la alerta se vea en minutos
                 pg.execute("""INSERT INTO rt.lectura (ts, inversor_id, pv_w, carga_w, red_w, soc, bat_v, temp_c, alarma)
                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (inversor_id, ts) DO NOTHING""",
                            (ts, inv, round(pv), round(carga), round(red), round(soc, 1),
