@@ -75,7 +75,10 @@ def pbi():
     ims = sorted((docs / "img").glob("powerbi_*.png"))
     if not ims:
         return '<div class="pend"><b>Capturas de Power BI pendientes.</b> Se construye en el PC con Windows (ver docs/powerbi_guia.md). Guarda las capturas como docs/img/powerbi_1.png, powerbi_2.png, … y vuelve a ejecutar scripts/build_informe.py.</div>'
-    return "\n".join(f'<div class="fig"><img src="img/{p.name}"><p>Figura Power BI {i+1}.</p></div>' for i, p in enumerate(ims))
+    pies = {"powerbi_1": "Figura 7. Power BI, página 1: resumen ejecutivo (indicadores, energía por periodo con drill-down, segmentaciones de inversor, fecha y tarifa).",
+            "powerbi_2": "Figura 8. Power BI, página 2: balance energético (origen de la energía, costo con la tarifa del what-if y perfil horario de generación).",
+            "powerbi_3": "Figura 9. Power BI, página 3: calidad y alarmas (alarmas por mes y por firma, energía integrada contra contador del equipo)."}
+    return "\n".join(f'<div class="fig"><img src="img/{p.name}"><p>{pies.get(p.stem, p.stem)}</p></div>' for p in ims)
 
 
 def aviso(t):

@@ -1,0 +1,40 @@
+// Medidas del modelo semántico SolarBI (tabla "Medidas"). Texto versionable; el modelo completo está en SolarBI.pbix.
+// Conexión: PostgreSQL, base solarbi, esquema gold, usuario lector_bi, modo Importar (servidor y clave no se guardan aquí).
+
+Energía solar kWh = SUM ( 'gold fact_energia_dia'[pv_kwh_integrado] )
+Carga kWh = SUM ( 'gold fact_energia_dia'[consumo_kwh_integrado] )
+Red kWh = SUM ( 'gold fact_energia_dia'[red_kwh_integrado] )
+Disponibilidad = AVERAGE ( 'gold fact_energia_dia'[cobertura_dia] )
+
+Autosuficiencia =
+VAR dias = FILTER ( 'gold fact_energia_dia', 'gold fact_energia_dia'[cobertura_dia] >= 0.9 )
+RETURN 1 - DIVIDE ( SUMX ( dias, 'gold fact_energia_dia'[red_kwh_integrado] ),
+                    SUMX ( dias, 'gold fact_energia_dia'[consumo_kwh_integrado] ) )
+
+Tarifa COP/kWh = SELECTEDVALUE ( 'Parámetro tarifa'[Parámetro tarifa], 790.49 )
+Costo importación COP = [Red kWh] * [Tarifa COP/kWh]
+Valor solar COP = [Energía solar kWh] * [Tarifa COP/kWh]
+
+Solar YTD kWh = TOTALYTD ( [Energía solar kWh], 'gold dim_fecha'[fecha] )
+Solar mes anterior kWh = CALCULATE ( [Energía solar kWh], DATEADD ( 'gold dim_fecha'[fecha], -1, MONTH ) )
+Variación vs mes anterior = DIVIDE ( [Energía solar kWh] - [Solar mes anterior kWh], [Solar mes anterior kWh] )
+
+Solar Wh bloques = SUM ( 'gold fact_lectura_5min'[e_pv_wh] )
+Carga Wh bloques = SUM ( 'gold fact_lectura_5min'[e_carga_wh] )
+
+Eventos de alarma = COUNTROWS ( 'gold fact_evento_alarma' )
+Duración mediana alarma s = MEDIAN ( 'gold fact_evento_alarma'[duracion_s] )
+SOC mínimo % = MIN ( 'gold fact_lectura_5min'[soc_min] )
+% bloques con batería baja =
+DIVIDE ( CALCULATE ( COUNTROWS ( 'gold fact_lectura_5min' ), 'gold fact_lectura_5min'[soc_min] < 30 ),
+         COUNTROWS ( 'gold fact_lectura_5min' ) )
+
+Solar equipo kWh = SUM ( 'gold fact_energia_dia'[pv_kwh_equipo] )
+Solar integrado días comparables kWh =
+CALCULATE ( [Energía solar kWh],
+    FILTER ( 'gold fact_energia_dia',
+        'gold fact_energia_dia'[cobertura_dia] >= 0.9 && NOT ISBLANK ( 'gold fact_energia_dia'[pv_kwh_equipo] ) ) )
+Solar equipo días comparables kWh =
+CALCULATE ( SUM ( 'gold fact_energia_dia'[pv_kwh_equipo] ),
+    FILTER ( 'gold fact_energia_dia',
+        'gold fact_energia_dia'[cobertura_dia] >= 0.9 && NOT ISBLANK ( 'gold fact_energia_dia'[pv_kwh_equipo] ) ) )
