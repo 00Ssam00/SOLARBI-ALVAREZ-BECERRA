@@ -4,3 +4,5 @@ origen/
 *.sqlite
 *.zst
 __pycache__/
+docs/_informe.html
+docs/_diccionario.html

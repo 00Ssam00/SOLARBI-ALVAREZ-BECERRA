@@ -1,41 +1,43 @@
 $ kubectl get all,pvc,configmap,secret -n solarbi
 NAME                           READY   STATUS      RESTARTS   AGE
-pod/etl-2vnf6                  0/1     Completed   0          2m2s
-pod/grafana-5d9b565856-jkv5x   1/1     Running     0          2m2s
-pod/postgres-0                 1/1     Running     0          2m2s
-pod/simulador-29916658-gvz8f   0/1     Completed   0          15s
+pod/etl-4mkw9                  0/1     Completed   0          10m
+pod/grafana-5d9b565856-857mn   1/1     Running     0          10m
+pod/postgres-0                 1/1     Running     0          10m
+pod/simulador-29916682-nf5vm   0/1     Error       0          10m
+pod/simulador-29916692-dfgrs   0/1     Completed   0          35s
 
 NAME                       TYPE           CLUSTER-IP        EXTERNAL-IP     PORT(S)          AGE
-service/grafana            LoadBalancer   192.168.194.245   192.168.139.2   3001:31050/TCP   2m2s
-service/postgres           ClusterIP      None              <none>          5432/TCP         2m2s
-service/postgres-externo   LoadBalancer   192.168.194.242   192.168.139.2   5433:31728/TCP   2m2s
+service/grafana            LoadBalancer   192.168.194.236   192.168.139.2   3001:30149/TCP   10m
+service/postgres           ClusterIP      None              <none>          5432/TCP         10m
+service/postgres-externo   LoadBalancer   192.168.194.183   192.168.139.2   5433:30151/TCP   10m
 
 NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/grafana   1/1     1            1           2m2s
+deployment.apps/grafana   1/1     1            1           10m
 
 NAME                                 DESIRED   CURRENT   READY   AGE
-replicaset.apps/grafana-5d9b565856   1         1         1       2m2s
+replicaset.apps/grafana-5d9b565856   1         1         1       10m
 
 NAME                        READY   AGE
-statefulset.apps/postgres   1/1     2m2s
+statefulset.apps/postgres   1/1     10m
 
 NAME                      SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
-cronjob.batch/simulador   * * * * *   <none>     False     0        15s             2m2s
+cronjob.batch/simulador   * * * * *   <none>     False     0        35s             10m
 
 NAME                           STATUS     COMPLETIONS   DURATION   AGE
-job.batch/etl                  Complete   1/1           46s        2m2s
-job.batch/simulador-29916658   Complete   1/1           4s         15s
+job.batch/etl                  Complete   1/1           39s        10m
+job.batch/simulador-29916682   Failed     0/1           10m        10m
+job.batch/simulador-29916692   Complete   1/1           6s         35s
 
 NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-persistentvolumeclaim/datos-postgres-0   Bound    pvc-62d8b361-116a-4b61-bfc4-ec05496b5d2a   5Gi        RWO            local-path     <unset>                 2m2s
+persistentvolumeclaim/datos-postgres-0   Bound    pvc-d8e1752b-a6cf-4592-83bb-31636260c2ec   5Gi        RWO            local-path     <unset>                 10m
 
 NAME                                    DATA   AGE
-configmap/grafana-alertas               1      2m2s
-configmap/grafana-dashboards            1      2m2s
-configmap/grafana-dashboards-provider   1      2m2s
-configmap/grafana-datasources           1      2m2s
-configmap/kube-root-ca.crt              1      2m2s
-configmap/solarbi-config                3      2m2s
+configmap/grafana-alertas               1      10m
+configmap/grafana-dashboards            2      10m
+configmap/grafana-dashboards-provider   1      10m
+configmap/grafana-datasources           1      10m
+configmap/kube-root-ca.crt              1      10m
+configmap/solarbi-config                4      10m
 
 NAME                          TYPE     DATA   AGE
-secret/solarbi-credenciales   Opaque   5      2m2s
+secret/solarbi-credenciales   Opaque   5      10m

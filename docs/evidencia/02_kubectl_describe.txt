@@ -1,7 +1,7 @@
 $ kubectl describe statefulset/postgres
 Name:               postgres
 Namespace:          solarbi
-CreationTimestamp:  Wed, 18 Nov 2026 05:56:13 -0500
+CreationTimestamp:  Wed, 18 Nov 2026 06:21:47 -0500
 Selector:           app=postgres
 Labels:             <none>
 Annotations:        <none>
@@ -44,13 +44,13 @@ Volume Claims:
 Events:
   Type    Reason            Age   From                    Message
   ----    ------            ----  ----                    -------
-  Normal  SuccessfulCreate  2m2s  statefulset-controller  Create Claim datos-postgres-0 Pod postgres-0 in StatefulSet postgres success
-  Normal  SuccessfulCreate  2m2s  statefulset-controller  Create Pod postgres-0 in StatefulSet postgres successful
+  Normal  SuccessfulCreate  10m   statefulset-controller  Create Claim datos-postgres-0 Pod postgres-0 in StatefulSet postgres success
+  Normal  SuccessfulCreate  10m   statefulset-controller  Create Pod postgres-0 in StatefulSet postgres successful
 
 $ kubectl describe deployment/grafana
 Name:                   grafana
 Namespace:              solarbi
-CreationTimestamp:      Wed, 18 Nov 2026 05:56:13 -0500
+CreationTimestamp:      Wed, 18 Nov 2026 06:21:47 -0500
 Labels:                 <none>
 Annotations:            deployment.kubernetes.io/revision: 1
 Selector:               app=grafana
@@ -124,4 +124,4 @@ NewReplicaSet:   grafana-5d9b565856 (1/1 replicas created)
 Events:
   Type    Reason             Age   From                   Message
   ----    ------             ----  ----                   -------
-  Normal  ScalingReplicaSet  2m2s  deployment-controller  Scaled up replica set grafana-5d9b565856 from 0 to 1
+  Normal  ScalingReplicaSet  10m   deployment-controller  Scaled up replica set grafana-5d9b565856 from 0 to 1
