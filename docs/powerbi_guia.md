@@ -1,6 +1,6 @@
 # Guía de Power BI (se construye en Windows)
 
-Formato versionable: **PBIP** (Power BI Project). En Power BI Desktop: *Archivo > Opciones > Características en versión preliminar > Guardar con formato de proyecto de Power BI (.pbip)*, y luego *Guardar como* dentro de `powerbi/`. Un `.pbix` es un binario comprimido que Git no puede comparar; PBIP guarda el modelo (TMDL) y el informe en texto plano.
+Formato entregado: `powerbi/SolarBI.pbix` más `powerbi/medidas.dax` (medidas en texto) y `powerbi/SolarBI.pbix.texto/` (definición de páginas y visuales en JSON). El modelo de datos es binario dentro del `.pbix`; el formato PBIP (TMDL en texto) sería más limpio para Git (Archivo > Opciones > Características en versión preliminar > Guardar con formato de proyecto de Power BI).
 
 ## 1. Conexión (no a los archivos de origen)
 

@@ -21,7 +21,7 @@ table.dic td, table.dic th { font-size: 7.6pt; padding: 2pt 4pt; } p.d { font-si
 <p style="margin-top:28pt"><b>Taller 6.</b> Línea de profundización 7: supervisión operativa en tiempo real con Grafana sobre una bodega de datos.</p>
 <p><b>Integrante:</b> Samuel Alvarez Becerra (trabajo individual, con conocimiento del docente)</p>
 <p><b>Docente:</b> Ramiro Grisales Montoya</p>
-<p><b>Repositorio:</b> https://github.com/00Ssam00/SOLARBI-TALLER6 (por publicar; ver README)</p>
+<p><b>Repositorio:</b> https://github.com/00Ssam00/SOLARBI-TALLER6</p>
 <p><b>Fecha:</b> 18 de noviembre de 2026</p>
 <p style="margin-top:20pt;font-size:9pt;color:#55606f">Datos: Bartels, T. S., Wu, R., Lu, X., Chen, Y., Lu, Y., Xia, F., Yang, H., Chen, Y., &amp; Li, T. (2026). OpenCEM: Multimodal photovoltaic and battery microgrid dataset with context records and sky imagery (Version 1.0.0) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.21436223 (CC BY 4.0).</p>
 </div>
@@ -34,9 +34,10 @@ table.dic td, table.dic th { font-size: 7.6pt; padding: 2pt 4pt; } p.d { font-si
 <li><b>El inversor 2 casi dejó de generar desde abril de 2026:</b> pasó de 250 kWh en marzo a 32 kWh en abril y 1,5 kWh en mayo, con alarmas del bit 14 en abril. Es un caso de mantenimiento correctivo, no de dimensionamiento.</li>
 <li><b>Mayo de 2026 concentra una avalancha de alarmas en el inversor 1:</b> 27.586 episodios de una misma firma (bit 3) más 3.109 del bit 14. Noviembre de 2025 también tuvo un pico (4.424 episodios del bit 52).</li>
 <li><b>La batería está sana la mayor parte del tiempo:</b> SOC medio de 90 % (inversor 1) y 82 % (inversor 2); solo 2,0 % y 5,7 % de los bloques bajaron de 30 %. Eso respalda un umbral de alerta de 30 %: se cruza pocas veces, así que cada cruce es una señal real.</li>
+<li><b>Los dos inversores pierden la red a la vez el 3 de mayo de 2026.</b> La tensión de red pasa de 100 % de lecturas con 235 V a 0 V y 0 Hz (66 % ese día y 0 % desde el 4 de mayo), y en junio y julio el contador del equipo marca 0 horas de red. Como ocurre en los dos inversores en el mismo instante y por varias señales independientes (tensión, frecuencia, potencia y contador), apunta a que la red del sitio dejó de estar disponible (corte o desconexión), no a un sensor dañado. Los datos no dicen la causa. Efecto: desde entonces la carga se atiende con sol y batería, y la autosuficiencia de esos meses (cercana a 100 %) no es comparable con la de antes.</li>
 <li><b>La disponibilidad del registro es de 85 % y 82 %</b> (promedio de los días con al menos una lectura): hay huecos de hasta 2,6 días. Cualquier decisión debe leerse junto con la cobertura.</li>
 </ul>
-<p><b>Recomendaciones:</b> (1) revisar el campo fotovoltaico y la entrada PV del inversor 2; (2) investigar la causa de las alarmas de mayo en el inversor 1 y obtener del fabricante del inversor el significado de los bits; (3) antes de comprar más paneles, resolver la disponibilidad del registro, porque sin datos continuos no se puede dimensionar con confianza; (4) evaluar gestión de cargas hacia las horas de 9 a 13 h, donde está el pico solar.</p>
+<p><b>Recomendaciones:</b> (1) revisar el campo fotovoltaico y la entrada PV del inversor 2; (2) investigar la causa de las alarmas de mayo en el inversor 1 y obtener del fabricante del inversor el significado de los bits; (3) antes de comprar más paneles, resolver la disponibilidad del registro, porque sin datos continuos no se puede dimensionar con confianza; (4) evaluar gestión de cargas hacia las horas de 8 a 12 h, donde está el pico solar (máximo a las 9 h en el inversor 1); (5) confirmar con el sitio qué pasó con la red desde el 3 de mayo de 2026 y si el registro de junio y julio refleja una operación aislada real.</p>
 
 <h2>A. Negocio</h2>
 <h3>A.1 Usuarios y preguntas</h3>
@@ -53,6 +54,7 @@ table.dic td, table.dic th { font-size: 7.6pt; padding: 2pt 4pt; } p.d { font-si
 <tr><td>Nulos sin imputar</td><td><code>pv1power</code> nulo: 1.233 filas (inv. 1) y 57.427 (inv. 2)</td><td>Se dejan nulos; se miden en la regla R08</td></tr>
 <tr><td>Tabla <code>totals</code> inutilizable</td><td>Todas sus potencias son 0 en los días revisados</td><td>No se usa; los totales se construyen desde <code>analog_measurements</code></td></tr>
 <tr><td>Bits de alarma sin documentar</td><td>El diccionario dice "definidos por el componente"</td><td>La severidad se asume 'aviso' y se declara como limitación</td></tr>
+<tr><td>Red sin tensión desde el 3 may 2026</td><td>linevolta = 0 V y linefreq = 0 Hz en ambos inversores desde el 4 may; el contador de tiempo de red queda en 0 h</td><td>Importación de red = 0 kWh desde entonces; se conserva como dato y se señala como hallazgo, no se corrige</td></tr>
 <tr><td>Tiempos en UTC con decimales</td><td>Sitio en Shenzhen (Asia/Shanghai, UTC+8)</td><td>Los días y horas del modelo son locales; los bloques se guardan en UTC</td></tr>
 <tr><td>Contexto con información sensible</td><td>Comandos, rutas y descripciones de lo que hace cada persona</td><td>Carga minimizada con lista blanca (sección J)</td></tr></table>
 
@@ -170,10 +172,11 @@ GROUP BY 1 ORDER BY 1;
 <p>N1: energía mensual con variación contra el mes anterior (<code>LAG</code>) y acumulado (<code>SUM OVER</code>). N2: autosuficiencia diaria con media móvil de 7 días (<code>AVG OVER ROWS</code>) y ranking mensual (<code>RANK</code>). N3: percentil 90 de potencia FV por hora (<code>percentile_cont</code>). N4: potencia de carga con y sin cómputo activo (join por rango de tiempo). N5: duración mediana de alarmas por mes con comparativo contra el mes anterior.</p>
 
 <h2>G. Power BI</h2>
-<p>Diseño completo, medidas DAX y pasos en <code>docs/powerbi_guia.md</code>. Formato versionable elegido: <b>PBIP</b> (Power BI Project, carpeta con TMDL y JSON de informe en texto plano). Un <code>.pbix</code> es un binario comprimido, no se puede comparar ni fusionar en Git; PBIP sí.</p>
+<p>Diseño completo, medidas DAX y pasos en <code>docs/powerbi_guia.md</code>.</p>
+<p><b>Formato versionable elegido y su justificación.</b> Se entrega el informe como <code>powerbi/SolarBI.pbix</code> acompañado de dos artefactos de texto plano que sí se comparan en Git: <code>powerbi/medidas.dax</code> (todas las medidas DAX) y <code>powerbi/SolarBI.pbix.texto/</code> (la definición de páginas y visuales en JSON, extraída del <code>.pbix</code>). El modelo de datos (<code>DataModel</code>) es un binario comprimido dentro del <code>.pbix</code> y Git no puede compararlo ni fusionarlo: es la limitación de este formato. Se prefirió porque lo que cambia con más frecuencia (medidas y visuales) queda en texto revisable, y porque el modelo es una estrella simple que se reconstruye desde <code>sql/03_gold.sql</code>: las relaciones y las tablas están definidas en el repositorio. La alternativa más limpia es el formato de proyecto PBIP (TMDL en texto), que se consideró y no se usó en esta entrega.</p>
 <ul><li><b>Conexión:</b> PostgreSQL <code>localhost:5433</code>, base <code>solarbi</code>, usuario <code>lector_bi</code>, modo Importar, desde las tablas <code>gold.*</code> (no desde los archivos de origen).</li>
 <li><b>Modelo:</b> estrella con <code>dim_fecha</code> marcada como tabla de fechas; relaciones uno a muchos hacia los cuatro hechos.</li>
-<li><b>Páginas:</b> (1) Resumen ejecutivo, (2) Balance energético con diagrama de Sankey (de dónde viene y a dónde va la energía), (3) Calidad y alarmas, con navegación, segmentaciones por inversor y fecha y drill-down año &gt; mes &gt; día.</li>
+<li><b>Páginas:</b> (1) Resumen ejecutivo, (2) Balance energético: columnas apiladas con la energía solar y la de red por periodo, matriz de costo con la tarifa del what-if y perfil horario de generación, (3) Calidad y alarmas, con navegación, segmentaciones por inversor y fecha y drill-down año &gt; mes &gt; día.</li>
 <li><b>Medidas:</b> inteligencia de tiempo (YTD, mes anterior, variación), autosuficiencia, costo de importación.</li>
 <li><b>What-if:</b> parámetro de tarifa de 500 a 1.200 COP/kWh.</li></ul>
 {{PBI}}
@@ -267,5 +270,7 @@ GROUP BY 1 ORDER BY 1;
 <li><code>linepowerw_a</code> se interpreta como potencia tomada de la red y <code>gridpowerw_a</code> como salida hacia la red; es consistente con los datos pero no está confirmado por el fabricante.</li>
 <li>La tarifa es una referencia pública residencial, no la del contrato.</li>
 <li>Solo hay anotaciones de cómputo para el inversor 1, sobre todo entre noviembre de 2025 y enero de 2026: el cruce de consumo con cómputo no se puede generalizar.</li>
+<li>Desde el 3 de mayo de 2026 los dos inversores registran 0 V y 0 Hz en la red. No se puede distinguir entre un corte, una desconexión deliberada y una falla del módulo de medida común. Se trata como hallazgo por investigar.</li>
+<li>Con la red ausente, la autosuficiencia de mayo a julio de 2026 tiende a 100 % y no es comparable con los meses anteriores; el indicador del resumen ejecutivo se calcula con todo el periodo.</li>
 <li>El simulador no es un modelo físico: sigue el perfil histórico por hora más ruido.</li></ul>
 </body></html>
