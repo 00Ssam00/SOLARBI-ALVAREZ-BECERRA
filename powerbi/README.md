@@ -1,36 +1,7 @@
-# Power BI: omitido en esta entrega
+# Power BI
 
-**El Paso 4 del enunciado (página de Power BI con medidas DAX) no se construyó.** El docente, Ramiro Grisales Montoya, autorizó de forma verbal hacer toda la parte de tableros en Grafana. Power BI Desktop solo corre en Windows, y este trabajo se desarrolla y se presenta en un solo equipo, un Mac.
+- `SolarBI.pbix`: informe completo (3 páginas, modelo estrella con 10 tablas y 15 relaciones, medidas DAX, parámetro what-if de tarifa). Conecta a PostgreSQL `solarbi` con el rol `lector_bi` en modo Importar; las credenciales no se guardan en el archivo.
+- `medidas.dax`: todas las medidas en texto, para comparar cambios con Git.
+- `SolarBI.pbix.texto/`: la parte textual del `.pbix` (definición de páginas y visuales en JSON, diseño del modelo), extraída para poder ver diferencias en Git. El modelo de datos (`DataModel`) es binario y solo está dentro del `.pbix`.
 
-Por eso esta carpeta no contiene un `.pbix` ni un `.pbip`. Los conceptos de Power BI (DAX, seguridad a nivel de fila, plegado de consultas, `.pbip` frente a `.pbix`) se responden en la Parte A de la consulta (`docs/parte_a.md`, preguntas D2, G4, E4 y V1).
-
-## Dónde queda cubierto cada requisito del Paso 4
-
-| Pide el enunciado | Dónde está | Fuente de la cifra |
-|---|---|---|
-| Tarjeta con la energía total (kWh) | Grafana, panel "Energía total del rango (kWh)" | `sum(energia_kwh)` de `dwh.fact_energia_dia` |
-| Gráfico con la energía diaria | Grafana, panel "Energía diaria (kWh)" (barras por fecha, no línea) | `dwh.fact_energia_dia` |
-| Tarjeta con el % de datos válidos | Grafana, panel "% de datos válidos del día" | `pct_datos_validos` de `dwh.fact_energia_dia` |
-| Conexión a PostgreSQL | Fuente de datos `solarbi-pg`, aprovisionada en `grafana/provisioning/datasources/` | Usuario del ETL (variables `PG*` del `.env`) |
-| Cifras desde medidas, no desde columnas arrastradas | Cada cifra sale de una consulta SQL sobre el modelo `dwh`, no de columnas sueltas | `grafana/dashboard.json` |
-
-## Si más adelante se retoma Power BI (Entregable V)
-
-El modelo `dwh` ya tiene forma de esquema estrella (`fact_energia_dia`, `dim_fecha`, `dim_dispositivo`), así que no haría falta rehacer datos. Pasos previstos, **sin probar**:
-
-1. En Power BI Desktop (Windows): Obtener datos, PostgreSQL, servidor `localhost:5432`, base `solarbi`, modo Importar.
-2. Usuario y clave de `PGUSER` y `PGPASSWORD` en `.env`.
-3. Cargar `dwh.fact_energia_dia`, `dwh.dim_fecha` y `dwh.dim_dispositivo`, y relacionarlas por `fecha_key` y `dispositivo_key`.
-4. Medidas de partida (sin probar):
-
-```dax
-Energia total (kWh) = SUM ( fact_energia_dia[energia_kwh] )
-
-% datos validos =
-DIVIDE (
-    SUM ( fact_energia_dia[lecturas_validas] ),
-    SUM ( fact_energia_dia[lecturas_esperadas] )
-)
-```
-
-La segunda suma lecturas válidas y esperadas por separado en vez de promediar porcentajes diarios, así un día con menos lecturas pesa lo que corresponde.
+Para guardar en formato PBIP desde Power BI Desktop: Archivo > Opciones > Características en versión preliminar > "Guardar con formato de proyecto de Power BI (.pbip)", y luego Guardar como `.pbip`.

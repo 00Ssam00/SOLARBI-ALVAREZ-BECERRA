@@ -1,0 +1,127 @@
+$ kubectl describe statefulset/postgres
+Name:               postgres
+Namespace:          solarbi
+CreationTimestamp:  Wed, 18 Nov 2026 06:34:43 -0500
+Selector:           app=postgres
+Labels:             <none>
+Annotations:        <none>
+Replicas:           1 desired | 1 total
+Update Strategy:    RollingUpdate
+  Partition:        0
+Pods Status:        1 Running / 0 Waiting / 0 Succeeded / 0 Failed
+Pod Template:
+  Labels:  app=postgres
+  Containers:
+   postgres:
+    Image:      postgres:17-alpine
+    Port:       5432/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:     1
+      memory:  1Gi
+    Requests:
+      cpu:      250m
+      memory:   512Mi
+    Liveness:   exec [sh -c pg_isready -U "$POSTGRES_USER" -d solarbi] delay=30s timeout=1s period=10s #success=1 #failure=6
+    Readiness:  exec [sh -c pg_isready -U "$POSTGRES_USER" -d solarbi] delay=5s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      POSTGRES_DB:        solarbi
+      PGDATA:             /var/lib/postgresql/data/pgdata
+      POSTGRES_USER:      <set to the key 'PG_USUARIO' in secret 'solarbi-credenciales'>  Optional: false
+      POSTGRES_PASSWORD:  <set to the key 'PG_CLAVE' in secret 'solarbi-credenciales'>    Optional: false
+    Mounts:
+      /var/lib/postgresql/data from datos (rw)
+  Volumes:         <none>
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Volume Claims:
+  Name:          datos
+  StorageClass:  
+  Labels:        <none>
+  Annotations:   <none>
+  Capacity:      5Gi
+  Access Modes:  [ReadWriteOnce]
+Events:
+  Type    Reason            Age   From                    Message
+  ----    ------            ----  ----                    -------
+  Normal  SuccessfulCreate  3m1s  statefulset-controller  Create Claim datos-postgres-0 Pod postgres-0 in StatefulSet postgres success
+  Normal  SuccessfulCreate  3m1s  statefulset-controller  Create Pod postgres-0 in StatefulSet postgres successful
+
+$ kubectl describe deployment/grafana
+Name:                   grafana
+Namespace:              solarbi
+CreationTimestamp:      Wed, 18 Nov 2026 06:34:43 -0500
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=grafana
+Replicas:               1 desired | 1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=grafana
+  Init Containers:
+   espera-postgres:
+    Image:      postgres:17-alpine
+    Port:       <none>
+    Host Port:  <none>
+    Command:
+      sh
+      -c
+      until pg_isready -h postgres -d solarbi; do echo esperando postgres; sleep 2; done
+    Environment:  <none>
+    Mounts:       <none>
+  Containers:
+   grafana:
+    Image:      grafana/grafana:11.6.0
+    Port:       3000/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:     500m
+      memory:  512Mi
+    Requests:
+      cpu:      100m
+      memory:   256Mi
+    Liveness:   http-get http://:3000/api/health delay=30s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  http-get http://:3000/api/health delay=10s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      GF_USERS_ALLOW_SIGN_UP:          false
+      GF_ANALYTICS_REPORTING_ENABLED:  false
+      GF_SECURITY_ADMIN_USER:          admin
+      GF_SECURITY_ADMIN_PASSWORD:      <set to the key 'GRAFANA_CLAVE' in secret 'solarbi-credenciales'>  Optional: false
+      LECTOR_CLAVE:                    <set to the key 'LECTOR_CLAVE' in secret 'solarbi-credenciales'>   Optional: false
+    Mounts:
+      /etc/grafana/provisioning/alerting from alertas (rw)
+      /etc/grafana/provisioning/dashboards from dash-prov (rw)
+      /etc/grafana/provisioning/datasources from ds (rw)
+      /var/lib/grafana/dashboards from dashboards (rw)
+  Volumes:
+   ds:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      grafana-datasources
+    Optional:  false
+   dash-prov:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      grafana-dashboards-provider
+    Optional:  false
+   alertas:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      grafana-alertas
+    Optional:  false
+   dashboards:
+    Type:          ConfigMap (a volume populated by a ConfigMap)
+    Name:          grafana-dashboards
+    Optional:      false
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   grafana-5d9b565856 (1/1 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  3m1s  deployment-controller  Scaled up replica set grafana-5d9b565856 from 0 to 1

@@ -1,0 +1,18 @@
+=== PRUEBA 1: se elimina el pod de PostgreSQL ===
+Antes:   166753 lecturas 5min, 603 dias, 39980 eventos, 24976 anotaciones
+$ kubectl delete pod postgres-0
+pod "postgres-0" deleted
+pod/postgres-0 condition met
+Despues: 166753 lecturas 5min, 603 dias, 39980 eventos, 24976 anotaciones
+
+=== PRUEBA 2: se elimina el pod de Grafana ===
+$ kubectl delete pod -l app=grafana
+pod "grafana-5d9b565856-cvjhr" deleted
+Waiting for deployment "grafana" rollout to finish: 0 of 1 updated replicas are available...
+deployment "grafana" successfully rolled out
+Dashboards provisionados tras el reinicio:
+ - SolarBI: histórico y calidad del dato
+ - SolarBI: tiempo real
+Reglas de alerta tras el reinicio:
+ - Batería baja
+ - Alarma activa en un inversor

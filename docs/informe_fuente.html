@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>BI Taller 6: SolarBI</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+body { font: 10.5pt/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1c2430; }
+h1 { font-size: 22pt; margin: 0 0 4pt; } h2 { font-size: 15pt; border-bottom: 2px solid #E9A23B; padding-bottom: 3pt; margin-top: 22pt; page-break-after: avoid; }
+h3 { font-size: 12pt; margin: 14pt 0 4pt; page-break-after: avoid; } h4 { font-size: 10.5pt; margin: 10pt 0 2pt; font-family: Menlo, monospace; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9pt; page-break-inside: auto; } tr { page-break-inside: avoid; }
+th, td { border: 1px solid #c9ced6; padding: 3pt 5pt; text-align: left; vertical-align: top; } th { background: #eef0f3; }
+code, pre { font-family: Menlo, Consolas, monospace; font-size: 8pt; } pre { background: #f4f5f7; border: 1px solid #dfe2e7; padding: 6pt; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+.cover { page-break-after: always; padding-top: 70pt; } .cover .k { color: #8a6a1f; font-weight: 600; letter-spacing: .5pt; }
+.cover p { font-size: 11.5pt; margin: 4pt 0; } img { max-width: 100%; border: 1px solid #d5d9df; } .fig { margin: 8pt 0; page-break-inside: avoid; } .fig p { font-size: 8.5pt; color: #55606f; margin: 2pt 0; }
+.nota { background: #fff7e6; border-left: 4px solid #E9A23B; padding: 5pt 8pt; margin: 8pt 0; } .pend { background: #fdeceb; border: 1px dashed #c0392b; padding: 14pt; text-align: center; color: #8e2b20; margin: 8pt 0; }
+table.dic td, table.dic th { font-size: 7.6pt; padding: 2pt 4pt; } p.d { font-size: 9pt; margin: 0 0 2pt; }
+</style></head><body>
+
+<div class="cover">
+<p class="k">INSTITUCIÓN UNIVERSITARIA PASCUAL BRAVO · INTELIGENCIA DE NEGOCIOS · GRUPOS 50 Y 01 · 2026-II</p>
+<h1>SolarBI: solución de BI contenerizada y orquestada en Kubernetes para el monitoreo energético de una microrred híbrida</h1>
+<p><i>From inverter telemetry to actionable insights: a containerized, Kubernetes-orchestrated BI pipeline for a hybrid microgrid.</i></p>
+<p style="margin-top:28pt"><b>Taller 6.</b> Línea de profundización 7: supervisión operativa en tiempo real con Grafana sobre una bodega de datos.</p>
+<p><b>Integrante:</b> Samuel Alvarez Becerra (trabajo individual, con conocimiento del docente)</p>
+<p><b>Docente:</b> Ramiro Grisales Montoya</p>
+<p><b>Repositorio:</b> https://github.com/00Ssam00/SOLARBI-ALVAREZ-BECERRA</p>
+<p><b>Fecha:</b> 18 de noviembre de 2026</p>
+<p style="margin-top:20pt;font-size:9pt;color:#55606f">Datos: Bartels, T. S., Wu, R., Lu, X., Chen, Y., Lu, Y., Xia, F., Yang, H., Chen, Y., &amp; Li, T. (2026). OpenCEM: Multimodal photovoltaic and battery microgrid dataset with context records and sky imagery (Version 1.0.0) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.21436223 (CC BY 4.0).</p>
+</div>
+
+<h2>Resumen ejecutivo</h2>
+<p>SolarBI lleva un año de telemetría real de dos inversores híbridos (15,6 millones de filas en SQLite) a un modelo dimensional en PostgreSQL por capas Bronze, Silver y Gold, con un ETL idempotente que mide y reporta la calidad del dato. Sobre ese modelo corren un tablero operativo en Grafana con alertas y un tablero analítico en Power BI. Todo el servidor corre en contenedores sobre Kubernetes y se levanta desde cero con <code>make up</code> en unos 55 segundos.</p>
+<p><b>Hallazgos para la dirección de infraestructura:</b></p>
+<ul>
+<li><b>La energía solar cubre cerca de una quinta parte de la carga.</b> En los días con buena cobertura, la autosuficiencia es 23,7 % en el inversor 1 y 20,0 % en el inversor 2; el resto se compra a la red. A la tarifa de referencia de 790,49 COP/kWh, importar costó unos 965 mil COP (inversor 1) y 1,61 millones de COP (inversor 2) en esos días.</li>
+<li><b>El inversor 2 casi dejó de generar desde abril de 2026:</b> pasó de 250 kWh en marzo a 32 kWh en abril y 1,5 kWh en mayo, con alarmas del bit 14 en abril. Es un caso de mantenimiento correctivo, no de dimensionamiento.</li>
+<li><b>Mayo de 2026 concentra una avalancha de alarmas en el inversor 1:</b> 27.586 episodios de una misma firma (bit 3) más 3.109 del bit 14. Noviembre de 2025 también tuvo un pico (4.424 episodios del bit 52).</li>
+<li><b>La batería está sana la mayor parte del tiempo:</b> SOC medio de 90 % (inversor 1) y 82 % (inversor 2); solo 2,0 % y 5,7 % de los bloques bajaron de 30 %. Eso respalda un umbral de alerta de 30 %: se cruza pocas veces, así que cada cruce es una señal real.</li>
+<li><b>Los dos inversores pierden la red a la vez el 3 de mayo de 2026.</b> La tensión de red pasa de 100 % de lecturas con 235 V a 0 V y 0 Hz (66 % ese día y 0 % desde el 4 de mayo), y en junio y julio el contador del equipo marca 0 horas de red. Como ocurre en los dos inversores en el mismo instante y por varias señales independientes (tensión, frecuencia, potencia y contador), apunta a que la red del sitio dejó de estar disponible (corte o desconexión), no a un sensor dañado. Los datos no dicen la causa. Efecto: desde entonces la carga se atiende con sol y batería, y la autosuficiencia de esos meses (cercana a 100 %) no es comparable con la de antes.</li>
+<li><b>La disponibilidad del registro es de 85 % y 82 %</b> (promedio de los días con al menos una lectura): hay huecos de hasta 2,6 días. Cualquier decisión debe leerse junto con la cobertura.</li>
+</ul>
+<p><b>Recomendaciones:</b> (1) revisar el campo fotovoltaico y la entrada PV del inversor 2; (2) investigar la causa de las alarmas de mayo en el inversor 1 y obtener del fabricante del inversor el significado de los bits; (3) antes de comprar más paneles, resolver la disponibilidad del registro, porque sin datos continuos no se puede dimensionar con confianza; (4) evaluar gestión de cargas hacia las horas de 8 a 12 h, donde está el pico solar (máximo a las 9 h en el inversor 1); (5) confirmar con el sitio qué pasó con la red desde el 3 de mayo de 2026 y si el registro de junio y julio refleja una operación aislada real.</p>
+
+<h2>A. Negocio</h2>
+<h3>A.1 Usuarios y preguntas</h3>
+<table><tr><th>Usuario</th><th>Necesidad</th><th>Preguntas que responde la solución</th><th>Herramienta</th></tr>
+<tr><td>Dirección de infraestructura</td><td>Decidir inversiones (más paneles, más batería, gestión de cargas)</td><td>¿Cuánta energía aporta el sol y cuánta se compra a la red? ¿Cuánto cuesta importar? ¿Qué inversor rinde menos? ¿La batería alcanza? ¿Qué franjas concentran el consumo?</td><td>Power BI</td></tr>
+<tr><td>Mantenimiento del sitio</td><td>Ver el estado casi en tiempo real y recibir alertas</td><td>¿Cuál es el SOC ahora? ¿Algún inversor reporta alarma? ¿Temperatura normal? ¿Llegan datos?</td><td>Grafana</td></tr>
+<tr><td>Área de TI</td><td>Que el servicio corra en la plataforma de contenedores</td><td>¿Se levanta y se destruye con un comando? ¿Sobrevive al reinicio de un pod? ¿Dónde están las credenciales?</td><td>Kubernetes</td></tr></table>
+<h3>A.2 Diagnóstico de la fuente</h3>
+<p>Descarga verificada con SHA-256 (la salida completa está en el Anexo 1). La base se descomprimió con Zstandard v1.5.7 (<code>zstd -d opencem-v1.0.0.sqlite.zst -o data/opencem-v1.0.0.sqlite</code>) y no se modifica: es la capa Bronze, se abre siempre en modo solo lectura y nunca se sube a GitHub.</p>
+<pre>{{EVID_INVENTARIO}}</pre>
+<table><tr><th>Hallazgo</th><th>Evidencia</th><th>Consecuencia</th></tr>
+<tr><td>Dos inversores con cobertura distinta</td><td>El inversor 1 llega hasta el 13 jul 2026; el 2, hasta el 22 jun 2026</td><td>Todo comparativo entre inversores se limita al periodo común</td></tr>
+<tr><td>Cadencia irregular</td><td>Mediana de 12,6 s; huecos de hasta 2,6 días</td><td>La energía se integra con dt limitado a 60 s; los huecos no se rellenan</td></tr>
+<tr><td>Nulos sin imputar</td><td><code>pv1power</code> nulo: 1.233 filas (inv. 1) y 57.427 (inv. 2)</td><td>Se dejan nulos; se miden en la regla R08</td></tr>
+<tr><td>Tabla <code>totals</code> inutilizable</td><td>Todas sus potencias son 0 en los días revisados</td><td>No se usa; los totales se construyen desde <code>analog_measurements</code></td></tr>
+<tr><td>Bits de alarma sin documentar</td><td>El diccionario dice "definidos por el componente"</td><td>La severidad se asume 'aviso' y se declara como limitación</td></tr>
+<tr><td>Red sin tensión desde el 3 may 2026</td><td>linevolta = 0 V y linefreq = 0 Hz en ambos inversores desde el 4 may; el contador de tiempo de red queda en 0 h</td><td>Importación de red = 0 kWh desde entonces; se conserva como dato y se señala como hallazgo, no se corrige</td></tr>
+<tr><td>Tiempos en UTC con decimales</td><td>Sitio en Shenzhen (Asia/Shanghai, UTC+8)</td><td>Los días y horas del modelo son locales; los bloques se guardan en UTC</td></tr>
+<tr><td>Contexto con información sensible</td><td>Comandos, rutas y descripciones de lo que hace cada persona</td><td>Carga minimizada con lista blanca (sección J)</td></tr></table>
+
+<h2>B. Indicadores</h2>
+<h3>B.1 Catálogo</h3>
+<table><tr><th>Indicador</th><th>Fórmula</th><th>Unidad</th><th>Granularidad</th><th>Meta o umbral</th><th>Fuente</th><th>Usuario</th></tr>
+<tr><td>Energía solar generada</td><td>Σ pv1power · Δt</td><td>kWh</td><td>5 min, día, mes</td><td>Dentro de ±25 % del contador del equipo</td><td>analog_measurements</td><td>Dirección</td></tr>
+<tr><td>Energía entregada a la carga</td><td>Σ outsumw · Δt</td><td>kWh</td><td>5 min, día, mes</td><td>Referencia: usedenergytoday</td><td>analog_measurements</td><td>Dirección</td></tr>
+<tr><td>Energía importada de la red</td><td>Σ linepowerw_a · Δt</td><td>kWh</td><td>5 min, día, mes</td><td>Tendencia a la baja</td><td>analog_measurements</td><td>Dirección</td></tr>
+<tr><td>Disponibilidad del registro</td><td>segundos con lectura (huecos ≤ 60 s) / segundos del periodo</td><td>%</td><td>día, mes</td><td>≥ 95 %</td><td>derivado</td><td>Dirección, TI</td></tr>
+<tr><td>Porcentaje de datos válidos</td><td>filas utilizables / filas del Bronze</td><td>%</td><td>inversor</td><td>≥ 95 %</td><td>etl.v_pct_validos</td><td>TI</td></tr>
+<tr><td><b>Autosuficiencia solar</b> (propio)</td><td>1 − energía de red / energía a la carga</td><td>%</td><td>día, mes</td><td>Subir; hoy ≈ 20 a 24 %</td><td>gold.v_kpi_mensual</td><td>Dirección</td></tr>
+<tr><td><b>SOC mínimo y tiempo con batería baja</b> (propio)</td><td>MIN(soc_min) y % de bloques con soc_min &lt; 30</td><td>%</td><td>día, mes</td><td>&lt; 30 % dispara alerta</td><td>fact_lectura_5min</td><td>Mantenimiento</td></tr>
+<tr><td><b>Costo de importar de la red</b> (económico)</td><td>energía de red × tarifa</td><td>COP</td><td>mes</td><td>Bajar</td><td>v_kpi_mensual + parametro</td><td>Dirección</td></tr>
+<tr><td>Valor de la energía solar</td><td>energía solar × tarifa</td><td>COP</td><td>mes</td><td>Subir</td><td>v_kpi_mensual + parametro</td><td>Dirección</td></tr></table>
+<p><b>Por qué los dos indicadores propios.</b> La autosuficiencia mide qué parte de la carga cubre el sol, que es la pregunta de inversión central de un sistema híbrido: un indicador de planta solar pura no la contesta porque ignora la red y la batería. El SOC mínimo y el tiempo con batería baja miden el riesgo de quedarse sin respaldo: la batería es lo que distingue al sistema híbrido de uno conectado solo a red.</p>
+<p><b>Tarifa elegida.</b> 790,49 COP/kWh: lo que EPM facturaba por kWh de estrato 3 en Medellín al cierre de 2025, según <a href="https://www.elcolombiano.com/negocios/precios-de-energia-colombia-bajaron-cuatro-veces-frente-2025-IP33786860">El Colombiano</a>. Es una tarifa residencial usada como referencia pública y verificable, no la tarifa del contrato del campus; por eso vive en la tabla <code>gold.parametro</code> y en el parámetro what-if de Power BI. Con ese valor, en los días con cobertura de al menos 90 % la importación costó unos 965 mil COP (inversor 1, 1.221 kWh) y 1,61 millones de COP (inversor 2, 2.040 kWh).</p>
+<h3>B.2 Análisis crítico</h3>
+<p><b>El indicador que no se puede calcular es el Performance Ratio (PR)</b> (y su pariente, el rendimiento específico en kWh/kWp). Necesita dos insumos que la fuente no trae: la irradiancia en el plano de los paneles y la potencia pico instalada del arreglo. Sin ellos no se puede separar "hubo poco sol" de "los paneles rinden poco". Qué haría: (1) pedir al sitio los kWp instalados; (2) estimar la irradiancia esperada con un modelo de cielo claro a partir de la latitud y longitud, que el propio registro de contexto derivado trae, y comparar la curva real contra la de cielo claro en días despejados; (3) a mediano plazo, usar las imágenes de cielo de OpenCEM, fuera del alcance de este taller, o instalar un piranómetro.</p>
+
+<h2>C. Modelo dimensional</h2>
+<p><b>Esquema:</b> constelación de hechos con esquema en estrella (star), no copo de nieve. Las dimensiones son pequeñas (la mayor, <code>dim_fecha</code>, tiene unas 400 filas), así que desnormalizar no cuesta almacenamiento y evita joins en cada consulta de Power BI y Grafana. Las cuatro tablas de hechos comparten dimensiones conformadas (<code>dim_fecha</code>, <code>dim_hora</code>, <code>dim_inversor</code>).</p>
+{{SVG_MODELO}}
+<h3>C.1 Procesos de negocio y grano</h3>
+<table><tr><th>Proceso</th><th>Tabla de hechos</th><th>Grano</th><th>Medidas</th></tr>
+<tr><td>P1 Operación</td><td>fact_lectura_5min</td><td>Un inversor en un bloque de 5 minutos (UTC)</td><td>Potencias promedio y máxima, SOC, tensión, corriente, temperatura, energía del bloque, cobertura</td></tr>
+<tr><td>P2 Balance energético</td><td>fact_energia_dia</td><td>Un inversor en un día local</td><td>kWh integrados, kWh del contador del equipo, diferencia, cobertura del día</td></tr>
+<tr><td>P3 Eventos de alarma</td><td>fact_evento_alarma</td><td>Un episodio: racha de lecturas con la misma firma de alarma</td><td>Duración, número de lecturas</td></tr>
+<tr><td>P4 Contexto operativo</td><td>fact_contexto</td><td>Una anotación del registro de contexto</td><td>Duración, núcleos de CPU, esfuerzo estimado</td></tr></table>
+<h3>C.2 Dimensiones y jerarquías</h3>
+<table><tr><th>Dimensión</th><th>Atributos principales</th><th>Jerarquía</th><th>Origen</th></tr>
+<tr><td>dim_fecha</td><td>fecha, año, trimestre, mes, nombre del mes, día, día de la semana, semana ISO, fin de semana, estación</td><td>año &gt; trimestre &gt; mes &gt; día</td><td>Calendario generado</td></tr>
+<tr><td>dim_hora</td><td>hora, franja, hora solar</td><td>franja &gt; hora</td><td>Calendario generado</td></tr>
+<tr><td>dim_inversor</td><td>nombre, primera y última lectura, activo al cierre</td><td>—</td><td>Fuente</td></tr>
+<tr><td><b>dim_estado_operativo</b> (propia)</td><td>startupstatus, outstatus, chgstatus, categoría, descripción</td><td>categoría &gt; estado</td><td>Construida por combinación de tres códigos</td></tr>
+<tr><td><b>dim_alarma</b> (propia)</td><td>firma JSON, palabra, valor, bits activos, severidad</td><td>severidad &gt; firma</td><td>Construida desde sysalarmflag</td></tr>
+<tr><td><b>dim_tipo_contexto</b> (propia)</td><td>fuente, tipo de contexto, categoría</td><td>categoría &gt; fuente &gt; tipo</td><td>Construida desde el JSON</td></tr></table>
+<p>La dimensión propia principal es <code>dim_estado_operativo</code>: en la fuente existen tres columnas enteras sueltas, y la dimensión las convierte en un estado con categoría que se puede filtrar y contar. Reconozco que las etiquetas (salida 0, 1 o 2; carga) son un supuesto, porque OpenCEM no documenta los códigos.</p>
+<h3>C.3 Eventos operativos frente a lecturas</h3>
+<p>Las alarmas se modelan como una tabla de hechos propia (episodios) y no como una columna de las lecturas. Razones: (1) el grano es distinto, un episodio dura desde segundos hasta horas y se cuenta, no se promedia; (2) un promedio de 5 minutos esconde un episodio corto; (3) el episodio permite medir duración y frecuencia. Para no perder la relación con las lecturas, <code>fact_lectura_5min</code> conserva <code>alarma_id</code> y <code>n_alarmas</code>, de modo que se puede cruzar un episodio con las lecturas de su ventana.</p>
+<h3>C.4 Matriz de bus</h3>
+<table><tr><th>Proceso \ Dimensión</th><th>dim_fecha</th><th>dim_hora</th><th>dim_inversor</th><th>dim_estado_operativo</th><th>dim_alarma</th><th>dim_tipo_contexto</th></tr>
+<tr><td>P1 fact_lectura_5min</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td><td></td></tr>
+<tr><td>P2 fact_energia_dia</td><td>✔</td><td></td><td>✔</td><td></td><td></td><td></td></tr>
+<tr><td>P3 fact_evento_alarma</td><td>✔</td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+<tr><td>P4 fact_contexto</td><td>✔</td><td>✔</td><td>✔ (opcional)</td><td></td><td></td><td>✔</td></tr></table>
+<h3>C.5 Dimensión de cambio lento (bonificación)</h3>
+<p>Candidata: <code>dim_inversor</code>. La tabla <code>specs</code> trae versiones de hardware, de BMS y de firmware que pueden cambiar a lo largo del año. Aplicaría <b>SCD tipo 2</b> (fila nueva con vigencia desde y hasta): un cambio de firmware afecta cómo se interpretan las lecturas de ese periodo, y se necesita saber con qué versión se tomó cada una. No se aplica en esta entrega porque los atributos cargados hoy (nombre, primera y última lectura) no cambian de forma que lo justifique; queda como decisión de diseño documentada.</p>
+
+<h2>D. Diccionario de datos</h2>
+<p>El diccionario completo (16 tablas, 144 columnas, con tipo, llaves, origen y regla) se genera desde la base en ejecución con <code>scripts/gen_diccionario.py</code>, para que no se desincronice. Se incluye en el Anexo 2.</p>
+<h3>D.1 Unidades y la evidencia para deducirlas</h3>
+<table><tr><th>Variable</th><th>Unidad</th><th>Evidencia</th></tr>
+<tr><td>pv1power</td><td>W</td><td>Diccionario del registro; al integrarla da 2,10 kWh el 30 nov 2025 (inversor 1) contra 2,1 kWh del contador pvgeneratenergytoday</td></tr>
+<tr><td>outsumw (carga)</td><td>W</td><td>El diccionario la marca "component-defined". Se deduce W así: promedio de 310 W × 24 h = 7,4 kWh, igual al contador usedenergytoday = 7,4 kWh (inversor 1, 30 nov 2025)</td></tr>
+<tr><td>linepowerw_a (red)</td><td>W</td><td>Diccionario; coherente con el balance: carga ≈ red + aporte de la batería y del sol</td></tr>
+<tr><td>battsoc</td><td>%</td><td>Rango observado 35 a 100</td></tr>
+<tr><td>battvolt</td><td>V</td><td>Rango observado 52,2 a 57,5, típico de un banco de 48 V nominales</td></tr>
+<tr><td>battcurr</td><td>A (positivo = descarga)</td><td>Documentación del registro</td></tr>
+<tr><td>temper1</td><td>°C</td><td>Rango observado 13 a 45</td></tr>
+<tr><td>energías de statistics</td><td>kWh</td><td>Diccionario del registro; se reinician a medianoche local</td></tr></table>
+
+<h2>E. ETL y calidad de datos</h2>
+<p><b>Herramienta:</b> Python 3.12 con <code>sqlite3</code> y <code>psycopg</code> 3, en un contenedor. Justificación: el origen es SQLite y el destino es PostgreSQL, así que el ETL necesita leer uno y cargar el otro con <code>COPY</code>; las agregaciones pesadas (ventanas, promedios por bloque) se empujan al motor de SQLite, y la lógica con estado (episodios de alarma, minimización del JSON) es más clara en Python que en SQL. No hay herramienta gráfica que reproducir: el ETL es un solo script versionado y corren con un Job.</p>
+<h3>E.1 Reglas de limpieza y conteos</h3>
+<p>Cada regla cuenta cuántas filas afecta, por inversor, en la tabla <code>etl.regla_calidad</code>. Resultado de la corrida de año completo (inversor 1 / inversor 2):</p>
+<table><tr><th>Regla</th><th>Qué hace</th><th>Acción</th><th>Inv. 1</th><th>Inv. 2</th></tr>
+<tr><td>R01 PV fuera de 0 a 8000 W</td><td>valor físicamente imposible</td><td>se anula</td><td>0</td><td>0</td></tr>
+<tr><td>R02 SOC fuera de 0 a 100 %</td><td>imposible</td><td>se anula</td><td>0</td><td>0</td></tr>
+<tr><td>R03 tensión de batería fuera de 30 a 80 V</td><td>imposible para un banco de 48 V</td><td>se anula</td><td>1</td><td>5</td></tr>
+<tr><td>R04 temperatura fuera de −20 a 120 °C</td><td>sensor fuera de rango</td><td>se anula</td><td>13</td><td>25</td></tr>
+<tr><td>R05 carga fuera de 0 a 20.000 W</td><td>imposible</td><td>se anula</td><td>0</td><td>0</td></tr>
+<tr><td>R06 red fuera de −50 a 20.000 W</td><td>imposible</td><td>se anula</td><td>6</td><td>0</td></tr>
+<tr><td>R07 fila sin medidas</td><td>pv, carga y SOC nulos o anulados a la vez</td><td>se descarta</td><td>5</td><td>55.661</td></tr>
+<tr><td>R08 pv1power nulo</td><td>ausencia de dato</td><td>se conserva nulo</td><td>1.233</td><td>57.427</td></tr>
+<tr><td>R09 alarma ausente</td><td>no se asume "sin alarma"</td><td>se conserva</td><td>1.854</td><td>57.632</td></tr>
+<tr><td>R10 bloque con menos de 25 % de cobertura</td><td>poco respaldo</td><td>se marca</td><td>4.422</td><td>4.077</td></tr>
+<tr><td>R11 bloque con menos de 90 % de cobertura</td><td>huecos</td><td>se marca</td><td>20.391</td><td>19.937</td></tr>
+<tr><td>R12 contexto con JSON inválido</td><td>—</td><td>se descarta</td><td colspan="2">0</td></tr>
+<tr><td>R13 contexto con claves fuera de la lista blanca</td><td>minimización (Ley 1581)</td><td>se recorta</td><td colspan="2">24.976</td></tr></table>
+<p><b>Inválido frente a evento real.</b> Un valor es <i>inválido</i> si es físicamente imposible (SOC de 130 %, tensión de 5 V): se anula y se cuenta. Un valor extremo pero posible es un <i>evento</i> y se conserva: una batería en 8 %, una alarma activa o un apagado no se corrigen, se modelan. Los nulos no se imputan: un hueco es ausencia de dato, no un cero, y se refleja en la cobertura.</p>
+<h3>E.2 Frecuencia de la capa Silver: 5 minutos</h3>
+<table><tr><th>Se gana</th><th>Se pierde</th></tr>
+<tr><td>De 2,99 millones de lecturas a 166.753 bloques: 94 % menos filas, consultas rápidas en Power BI y Grafana.<br>Cada bloque agrupa unas 24 lecturas (cadencia de 12,6 s), así que el promedio suaviza el ruido sin esconder la forma del día.<br>Permite unir lecturas, estado y alarmas en una misma clave temporal.</td><td>Picos de menos de 5 minutos: se compensa guardando también el máximo (<code>pv_w_max</code>).<br>Episodios cortos de alarma: se compensa construyéndolos desde el Bronze, no desde el bloque.<br>Resolución para transitorios del inversor, que este taller no analiza.</td></tr></table>
+<p>La energía no se calcula del promedio del bloque sino integrando cada lectura (Σ potencia × Δt, con Δt limitado a 60 s) para que un hueco no se interprete como potencia constante.</p>
+<h3>E.3 Conciliación e idempotencia</h3>
+<table><tr><th>Control</th><th>Origen</th><th>Destino</th><th>Cuadra</th></tr>
+<tr><td>Filas Bronze − descartadas = filas en Silver (inv. 1)</td><td>1.610.271</td><td>1.610.271</td><td>sí</td></tr>
+<tr><td>Ídem (inv. 2)</td><td>1.323.822</td><td>1.323.822</td><td>sí</td></tr>
+<tr><td>kWh PV Silver = Gold (inv. 1)</td><td>880,967</td><td>880,971</td><td>sí</td></tr>
+<tr><td>kWh PV Silver = Gold (inv. 2)</td><td>1.107,426</td><td>1.107,428</td><td>sí</td></tr>
+<tr><td>kWh PV del contador del equipo contra integrado, días con cobertura ≥ 90 % (inv. 1)</td><td>744,6</td><td>668,2</td><td>sí (−10,3 %, tolerancia 25 %)</td></tr>
+<tr><td>Ídem (inv. 2)</td><td>463,1</td><td>445,8</td><td>sí (−3,7 %)</td></tr>
+<tr><td>Anotaciones de contexto válidas = filas en Gold</td><td>24.976</td><td>24.976</td><td>sí</td></tr></table>
+<p><b>Diferencia explicada:</b> los autores del registro reportan un error de unos 20 % entre la energía fotovoltaica que integran y la del contador; el resultado propio (−10,3 % y −3,7 %) es coherente. El contador cuenta todo el día y la integración solo ve donde hay lecturas, por eso la comparación se hace en días con al menos 90 % de cobertura.</p>
+<p><b>Idempotencia:</b> cada tabla se escribe con <code>INSERT ... ON CONFLICT DO UPDATE</code> sobre su clave natural. Se ejecutó el ETL dos veces sobre la misma ventana y se obtuvieron los mismos conteos (166.753 bloques, 603 días, 39.980 episodios, 24.976 anotaciones); el Job también se repitió dentro del clúster con el mismo resultado.</p>
+
+<h2>F. Base de datos</h2>
+<p>DDL en <code>sql/01_esquemas.sql</code> a <code>sql/05_vistas.sql</code>, administrable desde DBeaver (conexión a <code>localhost:5433</code>, base <code>solarbi</code>).</p>
+<table><tr><th>Decisión</th><th>Justificación</th></tr>
+<tr><td>PK compuesta (inversor_id, bloque_ts) en fact_lectura_5min</td><td>Es el grano; el índice de la PK sirve las consultas por inversor y rango de tiempo y hace posible el upsert idempotente</td></tr>
+<tr><td>Índices secundarios en fecha_id y bloque_ts</td><td>Las consultas analíticas filtran por rango de fechas sin filtrar por inversor</td></tr>
+<tr><td>Índice GIN con <code>jsonb_path_ops</code> en silver.contexto.valor</td><td>Acelera el operador de contención <code>@&gt;</code> sobre el JSON</td></tr>
+<tr><td>FK de hechos a dimensiones</td><td>Integridad referencial en la carga; con 166 mil filas el costo es bajo</td></tr>
+<tr><td>Roles de mínimo privilegio</td><td><code>lector_bi</code> solo SELECT; <code>simulador_rw</code> solo escribe rt.lectura</td></tr></table>
+<h3>F.1 Consultas sobre JSON (sql/consultas/01_json.sql)</h3>
+<p>Operadores usados: <code>-&gt;&gt;</code>, <code>#&gt;&gt;</code>, <code>@&gt;</code>, <code>?</code>, <code>jsonb_path_exists</code> y <code>jsonb_array_elements_text</code> con ordinalidad. Por ejemplo, la carga AC media que el propio pipeline de contexto derivó, por inversor:</p>
+<pre>SELECT (valor-&gt;&gt;'inverter')::int AS inversor, COUNT(*) AS ventanas,
+       ROUND(AVG((valor #&gt;&gt; '{metrics,ac_load_w_mean}')::numeric), 1) AS carga_ac_media_w
+FROM silver.contexto
+WHERE valor @&gt; '{"source":"derived_context_pipeline"}' AND valor #&gt; '{metrics}' IS NOT NULL
+GROUP BY 1 ORDER BY 1;
+-- inversor 1: 289,2 W (1.159 ventanas)   inversor 2: 920,2 W (1.065 ventanas)</pre>
+<h3>F.2 Consultas de negocio (sql/consultas/02_negocio.sql)</h3>
+<p>N1: energía mensual con variación contra el mes anterior (<code>LAG</code>) y acumulado (<code>SUM OVER</code>). N2: autosuficiencia diaria con media móvil de 7 días (<code>AVG OVER ROWS</code>) y ranking mensual (<code>RANK</code>). N3: percentil 90 de potencia FV por hora (<code>percentile_cont</code>). N4: potencia de carga con y sin cómputo activo (join por rango de tiempo). N5: duración mediana de alarmas por mes con comparativo contra el mes anterior.</p>
+
+<h2>G. Power BI</h2>
+<p>Diseño completo, medidas DAX y pasos en <code>docs/powerbi_guia.md</code>.</p>
+<p><b>Formato versionable elegido y su justificación.</b> Se entrega el informe como <code>powerbi/SolarBI.pbix</code> acompañado de dos artefactos de texto plano que sí se comparan en Git: <code>powerbi/medidas.dax</code> (todas las medidas DAX) y <code>powerbi/SolarBI.pbix.texto/</code> (la definición de páginas y visuales en JSON, extraída del <code>.pbix</code>). El modelo de datos (<code>DataModel</code>) es un binario comprimido dentro del <code>.pbix</code> y Git no puede compararlo ni fusionarlo: es la limitación de este formato. Se prefirió porque lo que cambia con más frecuencia (medidas y visuales) queda en texto revisable, y porque el modelo es una estrella simple que se reconstruye desde <code>sql/03_gold.sql</code>: las relaciones y las tablas están definidas en el repositorio. La alternativa más limpia es el formato de proyecto PBIP (TMDL en texto), que se consideró y no se usó en esta entrega.</p>
+<ul><li><b>Conexión:</b> PostgreSQL <code>localhost:5433</code>, base <code>solarbi</code>, usuario <code>lector_bi</code>, modo Importar, desde las tablas <code>gold.*</code> (no desde los archivos de origen).</li>
+<li><b>Modelo:</b> estrella con <code>dim_fecha</code> marcada como tabla de fechas; relaciones uno a muchos hacia los cuatro hechos.</li>
+<li><b>Páginas:</b> (1) Resumen ejecutivo, (2) Balance energético: columnas apiladas con la energía solar y la de red por periodo, matriz de costo con la tarifa del what-if y perfil horario de generación, (3) Calidad y alarmas, con navegación, segmentaciones por inversor y fecha y drill-down año &gt; mes &gt; día.</li>
+<li><b>Medidas:</b> inteligencia de tiempo (YTD, mes anterior, variación), autosuficiencia, costo de importación.</li>
+<li><b>What-if:</b> parámetro de tarifa de 500 a 1.200 COP/kWh.</li></ul>
+{{PBI}}
+
+<h2>H. Grafana</h2>
+<ul><li><b>Fuente de datos:</b> PostgreSQL, aprovisionada por archivo (<code>grafana/provisioning/datasources</code>) con el rol de solo lectura <code>lector_bi</code> y la clave tomada de la variable de entorno que inyecta el Secret.</li>
+<li><b>Dos tableros aprovisionados</b> (sin crear nada desde la interfaz): <i>SolarBI: tiempo real</i> (últimos 30 minutos, refresco de 10 s) y <i>SolarBI: histórico y calidad del dato</i>.</li>
+<li><b>Variables:</b> <code>inversor</code> (consulta a dim_inversor, multivalor) y <code>agrupacion</code> (hora o día).</li>
+<li><b>Paneles:</b> series de tiempo y estado actual por inversor (SOC, potencia FV, alarmas, temperatura), energía integrada contra contador, perfil horario, eventos de alarma, y las tablas de calidad y conciliación del ETL.</li></ul>
+<div class="fig"><img src="img/grafana_tiempo_real_bateria.png"><p>Figura 1. Tablero de tiempo real con el escenario <i>bateria_baja</i>: el SOC cae a 5 % y se pone en rojo.</p></div>
+<div class="fig"><img src="img/grafana_historico_falla.png"><p>Figura 2. Tablero histórico: energía diaria, perfil horario, SOC mínimo, eventos de alarma (picos de noviembre de 2025 y mayo de 2026), reglas de calidad y conciliación.</p></div>
+<h3>H.1 Reglas de alerta</h3>
+<table><tr><th>Regla</th><th>Condición</th><th>Duración</th><th>Umbral y justificación</th></tr>
+<tr><td>Batería baja</td><td>Último SOC de cada inversor en una ventana de 5 min &lt; 30 %</td><td>1 min</td><td>30 %: solo 2,0 % y 5,7 % de los bloques históricos quedaron por debajo, así que el umbral deja margen antes del corte y casi no genera falsos positivos</td></tr>
+<tr><td>Alarma activa en un inversor</td><td>Alguna lectura con alarma en los últimos 2 min</td><td>1 min</td><td>Cualquier alarma: no se conoce la severidad de los bits, así que se prefiere avisar; la regla se puede afinar cuando se documenten</td></tr></table>
+<p>Ambas viven en el ConfigMap <code>grafana-alertas</code>: cambiar un umbral es editar el YAML y reiniciar Grafana, sin reconstruir ninguna imagen.</p>
+<div class="fig"><img src="img/grafana_alertas_bateria.png"><p>Figura 3. Estado de las reglas con el escenario <i>bateria_baja</i> (la regla "Batería baja" en estado Firing).</p></div>
+<div class="fig"><img src="img/grafana_alertas_falla.png"><p>Figura 4. Con el escenario <i>falla</i>: la regla "Alarma activa en un inversor" en estado Firing.</p></div>
+<h3>H.2 Simulación de streaming</h3>
+<p>El simulador es un <b>CronJob</b> dentro del clúster, una ejecución por minuto. Cada una inserta seis lecturas por inversor (una cada 12 s) en <code>rt.lectura</code>, siguiendo el perfil horario real (promedio histórico por hora local) con ruido. El escenario se cambia en vivo con <code>make escenario-falla</code>, <code>make escenario-bateria</code> o <code>make escenario-normal</code>, que modifican el ConfigMap sin reconstruir la imagen. Con el escenario <i>bateria_baja</i> el SOC cae 3 puntos por lectura y la alerta se dispara en unos cuatro minutos.</p>
+
+<h2>I. Arquitectura y análisis</h2>
+{{SVG_ARQ}}
+<h3>I.1 Power BI frente a Grafana</h3>
+<table><tr><th></th><th>Grafana</th><th>Power BI</th></tr>
+<tr><td>Pregunta</td><td>¿Qué está pasando ahora y debo actuar?</td><td>¿Qué pasó, por qué y qué conviene hacer?</td></tr>
+<tr><td>Usuario</td><td>Mantenimiento y operación</td><td>Dirección de infraestructura</td></tr>
+<tr><td>Frecuencia</td><td>Refresco de 10 s; alertas cada 30 s</td><td>Actualización programada o manual (diaria o semanal)</td></tr>
+<tr><td>Datos</td><td>Ventana corta, tabla <code>rt</code> y vistas del histórico</td><td>Modelo completo importado, años de historia</td></tr>
+<tr><td>Fortaleza</td><td>Series de tiempo, umbrales, alertas</td><td>Modelo semántico, DAX, escenarios, narrativa</td></tr></table>
+<p><b>Por qué no se intercambian.</b> Grafana no tiene un modelo semántico con medidas de negocio ni what-if; un tablero de decisión en Grafana obligaría a escribir SQL para cada indicador. Power BI no está pensado para alertar en segundos ni para refrescar cada 10 s sobre datos que cambian continuamente; y un tablero operativo que se actualiza una vez al día no sirve a quien debe reaccionar.</p>
+<h3>I.2 Evolución si los datos llegaran por Modbus o SCADA</h3>
+<p>Un gateway Modbus/RS485 (o el SCADA) publicaría cada lectura a un bus de mensajes (MQTT o Kafka). Un consumidor escribiría directo en una tabla de series de tiempo (hypertable de TimescaleDB) y las agregaciones a 5 minutos pasarían a ser agregados continuos, en lugar del ETL por lotes. El simulador de este taller ya cumple ese papel: escribe en <code>rt.lectura</code> con el mismo esquema. Habría que añadir: autenticación del gateway, reintentos con cola, validación de rangos en la entrada (las reglas R01 a R06 pasarían al consumidor) y retención por capas (datos crudos 30 días, agregados por años).</p>
+
+<h2>J. Ética y seguridad</h2>
+<h3>J.1 Tabla de contexto y la Ley 1581 de 2012</h3>
+<p>La tabla <code>context</code> contiene anotaciones de las estaciones de trabajo (comandos de consola, rutas, nombres de proyecto, descripciones libres de lo que se ejecutó). Aunque el registro viene parcialmente redactado, esa información describe la actividad de personas y podría ser dato personal de sus titulares (estudiantes y personal). Se aplicaron los principios de la ley:</p>
+<table><tr><th>Principio</th><th>Cómo se aplica</th></tr>
+<tr><td>Finalidad</td><td>El contexto se usa solo para explicar el consumo energético, no para vigilar personas</td></tr>
+<tr><td>Necesidad y minimización</td><td>El ETL carga solo una lista blanca de claves (fuente, tipo, núcleos de CPU, esfuerzo, métricas). Se descartan comandos, rutas y texto libre en las 24.976 anotaciones (regla R13)</td></tr>
+<tr><td>Seguridad</td><td>Acceso solo con el rol de lectura; el Bronze con el original queda fuera del repositorio</td></tr>
+<tr><td>Circulación restringida</td><td>No se publican anotaciones individuales: los tableros muestran conteos y agregados</td></tr>
+<tr><td>Datos sensibles</td><td>No se tratan; en un despliegue real se exigiría aviso de privacidad y autorización de los titulares</td></tr></table>
+<h3>J.2 Seguridad de acceso y credenciales</h3>
+<ul><li><b>Credenciales fuera del código:</b> <code>scripts/up.sh</code> genera claves aleatorias en <code>.env</code> (permisos 600, ignorado por git) y las entrega al clúster como un <b>Secret</b> (<code>solarbi-credenciales</code>). El repositorio solo versiona <code>.env.ejemplo</code>. Los contenedores leen las claves con <code>secretKeyRef</code>; ninguna está en una imagen ni en un manifiesto.</li>
+<li><b>Mínimo privilegio:</b> tres roles de base de datos: administrador (solo PostgreSQL y el ETL), <code>lector_bi</code> (solo SELECT, para Grafana y Power BI) y <code>simulador_rw</code> (solo escribe <code>rt.lectura</code>).</li>
+<li><b>Tableros:</b> Grafana con registro desactivado y usuario administrador con clave del Secret; tableros aprovisionados no editables desde la interfaz.</li>
+<li><b>Límites que reconozco:</b> un Secret de Kubernetes está codificado en base64, no cifrado, salvo que el clúster active cifrado en reposo; en producción usaría Sealed Secrets o un gestor externo. No hay TLS entre servicios ni NetworkPolicy (un clúster local de un nodo no las aplica). PostgreSQL se expone en <code>localhost:5433</code> solo para Power BI y DBeaver.</li></ul>
+
+<h2>K. Despliegue: Docker y Kubernetes</h2>
+<h3>K.1 Contenedores</h3>
+<table><tr><th>Imagen</th><th>Base</th><th>Tamaño</th><th>Justificación</th></tr>
+<tr><td>solarbi-etl:1</td><td>python:3.12-slim</td><td>235 MB</td><td>slim evita el sistema completo de la imagen estándar (más de 1 GB) y, a diferencia de Alpine, usa glibc: <code>psycopg[binary]</code> trae ruedas precompiladas y no se compila nada. Corre como usuario no root (10001)</td></tr>
+<tr><td>solarbi-simulador:1</td><td>python:3.12-slim</td><td>235 MB</td><td>Misma base: se reutiliza la capa en disco</td></tr>
+<tr><td>postgres:17-alpine</td><td>oficial</td><td>416 MB</td><td>Versión fija</td></tr>
+<tr><td>grafana/grafana:11.6.0</td><td>oficial</td><td>826 MB</td><td>Versión fija, nada de <code>latest</code></td></tr></table>
+<p><code>docker-compose.yml</code> reproduce PostgreSQL, ETL, simulador y Grafana en desarrollo local, con las mismas imágenes y el mismo provisioning que usa el clúster (Grafana en el puerto 3002, PostgreSQL en el 5434).</p>
+<h3>K.2 Clúster local</h3>
+<p><b>Distribución elegida: el Kubernetes integrado de OrbStack</b> (un nodo, v1.36). Ya uso OrbStack como motor Docker en un Mac con Apple Silicon, así que no hay otra máquina virtual que mantener (minikube y kind suman una más). Comparte el motor de imágenes con el clúster: <b>mis imágenes llegan al clúster sin registro</b>, con <code>docker build</code> y <code>imagePullPolicy: Never</code>. Los servicios <code>LoadBalancer</code> se publican en <code>localhost</code>, que es lo que necesitan Power BI y DBeaver. Además monta las carpetas del Mac, por eso el Job lee el SQLite con <code>hostPath</code> y solo lectura. Limitación: es específico de macOS; en otra máquina se usaría <code>kind load docker-image</code> y un volumen equivalente.</p>
+<h3>K.3 Necesidad, objeto elegido y alternativas</h3>
+<table><tr><th>Necesidad</th><th>Objeto elegido</th><th>Por qué frente a las alternativas</th></tr>
+<tr><td>Aislar el proyecto</td><td>Namespace <code>solarbi</code></td><td>Un solo <code>kubectl delete namespace</code> lo borra todo; permite cuotas</td></tr>
+<tr><td>Base que no pierde datos</td><td>StatefulSet <code>postgres</code> + volumeClaimTemplate (PVC 5 Gi) + Service headless</td><td>Un Deployment no garantiza identidad estable ni el reenganche del mismo volumen; el StatefulSet sí</td></tr>
+<tr><td>Grafana siempre disponible</td><td>Deployment <code>grafana</code> con provisioning por ConfigMap</td><td>No tiene estado propio (todo está en el provisioning), así que un Deployment lo repone sin intervención</td></tr>
+<tr><td>Credenciales fuera del código</td><td>Secret <code>solarbi-credenciales</code></td><td>No van en imagen ni en git; un ConfigMap no sirve porque no está pensado para secretos</td></tr>
+<tr><td>Configuración separada</td><td>ConfigMap <code>solarbi-config</code> (+ 4 ConfigMaps de Grafana vía kustomize)</td><td>Ventana del ETL, ruta del origen y escenario del simulador cambian sin reconstruir la imagen</td></tr>
+<tr><td>Comunicación entre servicios</td><td>Service (DNS <code>postgres</code>)</td><td>El ETL, el simulador y Grafana encuentran la base por nombre, no por IP del pod, que cambia</td></tr>
+<tr><td>Carga histórica</td><td>Job <code>etl</code></td><td>Corre una vez y termina; deja el resultado en <code>etl.corrida</code> y en los logs. Un Deployment lo reiniciaría sin fin</td></tr>
+<tr><td>Datos nuevos periódicos</td><td>CronJob <code>simulador</code> (* * * * *)</td><td>Tiempo fijo, <code>concurrencyPolicy: Forbid</code>; un Deployment en bucle gastaría memoria constante</td></tr>
+<tr><td>Saber si está sano</td><td>readinessProbe y livenessProbe: <code>pg_isready</code> (PostgreSQL) y HTTP <code>/api/health</code> (Grafana)</td><td>Readiness retira del servicio a un pod no listo; liveness lo reinicia si se cuelga</td></tr>
+<tr><td>No agotar el anfitrión</td><td>requests y limits de CPU y memoria en cada contenedor</td><td>PostgreSQL 250m/512Mi a 1/1Gi; Grafana 100m/256Mi a 500m/512Mi; ETL hasta 2 CPU y 1Gi</td></tr>
+<tr><td>Acceso desde el anfitrión</td><td>Service tipo LoadBalancer: Grafana en <code>localhost:3001</code>, PostgreSQL en <code>localhost:5433</code></td><td>OrbStack los publica; NodePort exigiría recordar puertos altos y <code>port-forward</code> ocupa una terminal</td></tr></table>
+<h3>K.4 Reproducibilidad y resiliencia</h3>
+<p><b>Un comando levanta todo y otro lo elimina:</b> <code>make up</code> (construye las imágenes, crea el Secret, aplica los manifiestos con kustomize, espera a PostgreSQL, al ETL y a Grafana) y <code>make down</code> (borra el namespace, incluido el volumen). Se probó la secuencia down y up completa desde cero, con ETL sobre los 4,4 GB: unos 55 segundos.</p>
+<h4>Prueba de resiliencia (salida real)</h4>
+<pre>{{EVID_RESILIENCIA}}</pre>
+<p>Se elimina el pod de PostgreSQL: el StatefulSet lo recrea y se reengancha al mismo volumen, con los mismos datos. Se elimina el pod de Grafana: el Deployment lo recrea con su fuente de datos, tableros y alertas, sin pasos manuales.</p>
+<h4>Evidencia de <code>kubectl get</code> y <code>kubectl describe</code></h4>
+<pre>{{EVID_GET}}</pre>
+<pre>{{EVID_DESCRIBE}}</pre>
+<h3>Bonificación y trabajo pendiente</h3>
+<ul><li><b>Kustomize</b> en uso (<code>kustomization.yaml</code>) para generar los ConfigMaps de Grafana desde los archivos del repositorio.</li>
+<li><b>Escalado:</b> no se escaló una réplica en esta entrega. Una nota para la sustentación: Grafana no tiene estado, por eso <code>kubectl scale</code> funciona con más réplicas detrás del Service; PostgreSQL tiene estado y un solo escritor, así que otra réplica no comparte el volumen ni replica los datos: exigiría replicación en streaming y un operador.</li></ul>
+
+<h2>Anexo 1. Verificación de la descarga</h2>
+<pre>{{EVID_CHECKSUM}}</pre>
+<h2>Anexo 2. Diccionario de datos</h2>
+{{DICCIONARIO}}
+<h2>Anexo 3. Limitaciones y supuestos</h2>
+<ul><li>El significado de los bits de alarma y de los códigos de estado (<code>startupstatus</code>, <code>outstatus</code>, <code>chgstatus</code>) no está documentado: las etiquetas de <code>dim_estado_operativo</code> y la severidad de <code>dim_alarma</code> son supuestos declarados.</li>
+<li><code>linepowerw_a</code> se interpreta como potencia tomada de la red y <code>gridpowerw_a</code> como salida hacia la red; es consistente con los datos pero no está confirmado por el fabricante.</li>
+<li>La tarifa es una referencia pública residencial, no la del contrato.</li>
+<li>Solo hay anotaciones de cómputo para el inversor 1, sobre todo entre noviembre de 2025 y enero de 2026: el cruce de consumo con cómputo no se puede generalizar.</li>
+<li>Desde el 3 de mayo de 2026 los dos inversores registran 0 V y 0 Hz en la red. No se puede distinguir entre un corte, una desconexión deliberada y una falla del módulo de medida común. Se trata como hallazgo por investigar.</li>
+<li>Con la red ausente, la autosuficiencia de mayo a julio de 2026 tiende a 100 % y no es comparable con los meses anteriores; el indicador del resumen ejecutivo se calcula con todo el periodo.</li>
+<li>El simulador no es un modelo físico: sigue el perfil histórico por hora más ruido.</li></ul>
+</body></html>

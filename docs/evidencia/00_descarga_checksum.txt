@@ -1,0 +1,10 @@
+$ shasum -a 256 -c opencem-v1.0.0-SHA256SUMS.txt
+opencem-v1.0.0-support.zip: OK
+opencem-v1.0.0.sqlite.zst: OK
+
+$ tamaños de los archivos (bytes)
+302059978 opencem-v1.0.0.sqlite.zst
+9972654 opencem-v1.0.0-support.zip
+4439408640 data/opencem-v1.0.0.sqlite
+
+$ zstd -d opencem-v1.0.0.sqlite.zst -o data/opencem-v1.0.0.sqlite   (herramienta: Zstandard CLI v1.5.7)

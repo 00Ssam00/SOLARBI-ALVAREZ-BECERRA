@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: grafana, namespace: solarbi}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: grafana}}
+  template:
+    metadata: {labels: {app: grafana}}
+    spec:
+      initContainers:
+      - name: espera-postgres
+        image: postgres:17-alpine
+        command: ["sh", "-c", "until pg_isready -h postgres -d solarbi; do echo esperando postgres; sleep 2; done"]
+      containers:
+      - name: grafana
+        image: grafana/grafana:11.6.0
+        ports: [{containerPort: 3000}]
+        env:
+        - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
+        - {name: GF_ANALYTICS_REPORTING_ENABLED, value: "false"}
+        - {name: GF_SECURITY_ADMIN_USER, value: admin}
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: GRAFANA_CLAVE}}
+        - name: LECTOR_CLAVE
+          valueFrom: {secretKeyRef: {name: solarbi-credenciales, key: LECTOR_CLAVE}}
+        readinessProbe:
+          httpGet: {path: /api/health, port: 3000}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: {path: /api/health, port: 3000}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        volumeMounts:
+        - {name: ds, mountPath: /etc/grafana/provisioning/datasources}
+        - {name: dash-prov, mountPath: /etc/grafana/provisioning/dashboards}
+        - {name: alertas, mountPath: /etc/grafana/provisioning/alerting}
+        - {name: dashboards, mountPath: /var/lib/grafana/dashboards}
+      volumes:
+      - {name: ds, configMap: {name: grafana-datasources}}
+      - {name: dash-prov, configMap: {name: grafana-dashboards-provider}}
+      - {name: alertas, configMap: {name: grafana-alertas}}
+      - {name: dashboards, configMap: {name: grafana-dashboards}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grafana, namespace: solarbi}
+spec:
+  type: LoadBalancer         # OrbStack lo publica en http://localhost:3001 (el 3000 suele estar ocupado)
+  selector: {app: grafana}
+  ports: [{port: 3001, targetPort: 3000}]

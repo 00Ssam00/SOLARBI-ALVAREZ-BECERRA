@@ -1,48 +1,49 @@
-# SolarBI: PostgreSQL y Grafana locales. Las credenciales salen del archivo .env (no se sube al repo).
+# Desarrollo local (paso previo al clúster): PostgreSQL + ETL + Grafana, con las mismas imágenes y
+# el mismo provisioning que usa Kubernetes. Uso:  cp .env.ejemplo .env  &&  docker compose up
+name: solarbi-dev
 services:
   postgres:
-    image: postgres:17
-    container_name: solarbi-postgres
-    restart: unless-stopped
-    command: ["postgres", "-c", "timezone=America/Bogota"]
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${PGUSER:?define PGUSER en .env}
-      POSTGRES_PASSWORD: ${PGPASSWORD:?define PGPASSWORD en .env}
-      POSTGRES_DB: ${PGDATABASE:?define PGDATABASE en .env}
-    ports:
-      - "127.0.0.1:${PGPORT:-5432}:5432"   # solo accesible desde este equipo
-    volumes:
-      - solarbi_pgdata:/var/lib/postgresql/data   # volumen de Docker, fuera del repo
+      POSTGRES_DB: solarbi
+      POSTGRES_USER: ${PG_USUARIO}
+      POSTGRES_PASSWORD: ${PG_CLAVE}
+    ports: ["5434:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d solarbi"]
       interval: 5s
-      timeout: 3s
       retries: 10
-
-  grafana:
-    image: grafana/grafana-oss:12.4.3
-    container_name: solarbi-grafana
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+  etl:
+    build: {context: ., dockerfile: etl/Dockerfile}
+    image: solarbi-etl:1
+    depends_on: {postgres: {condition: service_healthy}}
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?define GRAFANA_ADMIN_PASSWORD en .env}
-      GF_DATE_FORMATS_DEFAULT_TIMEZONE: America/Bogota
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-      # variables que el aprovisionamiento de la fuente de datos interpola (no hay credenciales en el repo)
-      PGDATABASE: ${PGDATABASE}
-      PGUSER: ${PGUSER}
-      PGPASSWORD: ${PGPASSWORD}
-    ports:
-      - "127.0.0.1:3000:3000"
+      PGHOST: postgres
+      PGDATABASE: solarbi
+      PGUSER: ${PG_USUARIO}
+      PGPASSWORD: ${PG_CLAVE}
+      LECTOR_CLAVE: ${LECTOR_CLAVE}
+      SIM_CLAVE: ${SIM_CLAVE}
+      SQLITE_PATH: /datos/opencem-v1.0.0.sqlite
+    volumes: ["./origen/data:/datos:ro"]
+  simulador:
+    build: {context: ., dockerfile: simulador/Dockerfile}
+    image: solarbi-simulador:1
+    depends_on: {etl: {condition: service_completed_successfully}}
+    environment: {PGHOST: postgres, PGDATABASE: solarbi, PGUSER: simulador_rw, PGPASSWORD: "${SIM_CLAVE}"}
+    entrypoint: ["sh", "-c", "while true; do python -u simulador.py; sleep 60; done"]
+  grafana:
+    image: grafana/grafana:11.6.0
+    depends_on: {etl: {condition: service_completed_successfully}}
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_CLAVE}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      LECTOR_CLAVE: ${LECTOR_CLAVE}
+    ports: ["3002:3000"]
     volumes:
-      - solarbi_grafana:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboard.json:/etc/grafana/dashboards/dashboard.json:ro
-
-volumes:
-  solarbi_pgdata:
-  solarbi_grafana:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+volumes: {pgdata: {}}

@@ -1,0 +1,312 @@
+{
+ "uid": "solarbi-tiempo-real",
+ "title": "SolarBI: tiempo real",
+ "tags": [
+  "solarbi",
+  "taller6"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": false,
+ "refresh": "10s",
+ "time": {
+  "from": "now-30m",
+  "to": "now"
+ },
+ "links": [
+  {
+   "title": "Tiempo real",
+   "type": "link",
+   "url": "/d/solarbi-tiempo-real",
+   "icon": "bolt"
+  },
+  {
+   "title": "Histórico",
+   "type": "link",
+   "url": "/d/solarbi-historico",
+   "icon": "history"
+  }
+ ],
+ "templating": {
+  "list": [
+   {
+    "name": "inversor",
+    "label": "Inversor",
+    "type": "query",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "solarbi-pg"
+    },
+    "multi": true,
+    "includeAll": true,
+    "refresh": 1,
+    "current": {
+     "selected": true,
+     "text": "All",
+     "value": "$__all"
+    },
+    "query": "SELECT inversor_id AS __value, nombre AS __text FROM gold.dim_inversor ORDER BY 1"
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 100,
+   "type": "row",
+   "title": "Operación en tiempo real (el simulador escribe cada minuto)",
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Carga de la batería (SOC)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DISTINCT ON (inversor_id) ts AS time, 'Inversor ' || inversor_id AS metric, soc AS value FROM rt.lectura WHERE inversor_id IN (${inversor:csv}) ORDER BY inversor_id, ts DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 30
+       },
+       {
+        "color": "green",
+        "value": 50
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {},
+   "description": "Último valor por inversor. La alerta 'Batería baja' se dispara por debajo de 30 %."
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Potencia FV ahora",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DISTINCT ON (inversor_id) ts AS time, 'Inversor ' || inversor_id AS metric, pv_w AS value FROM rt.lectura WHERE inversor_id IN (${inversor:csv}) ORDER BY inversor_id, ts DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "watt"
+    },
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Lecturas con alarma (últimos 2 min)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT now() AS time, 'Alarmas' AS metric, COUNT(*) FILTER (WHERE alarma) AS value FROM rt.lectura WHERE ts > now() - interval '2 minutes' AND inversor_id IN (${inversor:csv})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Temperatura",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DISTINCT ON (inversor_id) ts AS time, 'Inversor ' || inversor_id AS metric, temp_c AS value FROM rt.lectura WHERE inversor_id IN (${inversor:csv}) ORDER BY inversor_id, ts DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "celsius"
+    },
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Potencia FV y carga (30 min)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 6,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT ts AS time, 'FV inv ' || inversor_id AS metric, pv_w AS value FROM rt.lectura WHERE ts > now() - interval '30 minutes' AND inversor_id IN (${inversor:csv}) UNION ALL SELECT ts, 'Carga inv ' || inversor_id, carga_w FROM rt.lectura WHERE ts > now() - interval '30 minutes' AND inversor_id IN (${inversor:csv}) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "watt"
+    },
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "SOC de la batería (30 min)",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "solarbi-pg"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 6,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "solarbi-pg"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT ts AS time, 'Inversor ' || inversor_id AS metric, soc AS value FROM rt.lectura WHERE ts > now() - interval '30 minutes' AND inversor_id IN (${inversor:csv}) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {}
+  }
+ ]
+}
